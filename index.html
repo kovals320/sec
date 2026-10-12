@@ -310,7 +310,7 @@
                         <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="צח'י">צח"י</button>
                         <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="אקדוחנים">אקדוחנים</button>
                         <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="רחפנים">רחפנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'l">חמ"ל</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'ל">חמ"ל</button>
                     </div>
                 </div>
 
@@ -338,15 +338,20 @@
                 ניהול משתמשים והרשאות טאבים
             </h3>
 
+            <!-- טופס הוספת משתמש חדש כולל שדה תפקיד Role -->
             <form onsubmit="addUser(event)" class="space-y-3 border-b border-slate-800 pb-4 text-xs">
                 <h4 class="font-bold text-amber-500">הוספת משתמש חדש</h4>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="new-user-name" placeholder="שם מלא" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
                     <input type="email" id="new-user-email" placeholder="אימייל" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
                 </div>
-                <div class="grid grid-cols-2 gap-2">
+                <div class="grid grid-cols-3 gap-2">
                     <input type="tel" id="new-user-phone" placeholder="טלפון" class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
-                    <input type="text" id="new-user-password" placeholder="סיסמה ראשונית" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                    <input type="text" id="new-user-password" placeholder="סיסמה" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                    <select id="new-user-role" class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white font-semibold">
+                        <option value="user">user</option>
+                        <option value="admin">admin</option>
+                    </select>
                 </div>
 
                 <div class="space-y-1 pt-1">
@@ -1063,13 +1068,18 @@
                 const payload = {};
                 payload[permField] = isChecked;
 
-                await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${userId}`, {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${userId}`, {
                     method: 'PATCH',
                     headers: apiHeaders,
                     body: JSON.stringify(payload)
                 });
 
-                logAction('עדכון', `עדכון הרשאת ${permField} למשתמש #${userId} ל-${isChecked}`);
+                if (res.ok) {
+                    logAction('עדכון', `עדכון הרשאת ${permField} למשתמש #${userId} ל-${isChecked}`);
+                    // עדכון מקומי של המשתמש בזיכרון
+                    const u = allUsers.find(item => item.id === userId);
+                    if (u) u[permField] = isChecked;
+                }
             } catch (err) {
                 alert("שגיאה בעדכון הרשאות המשתמש");
             }
@@ -1083,6 +1093,7 @@
             const email = document.getElementById('new-user-email').value.trim();
             const phone = document.getElementById('new-user-phone').value.trim();
             const password = document.getElementById('new-user-password').value.trim();
+            const role = document.getElementById('new-user-role').value; // user / admin
 
             const permTasks = document.getElementById('new-user-p-tasks').checked;
             const permPersonnel = document.getElementById('new-user-p-personnel').checked;
@@ -1097,7 +1108,7 @@
                         email,
                         phone,
                         password,
-                        role: 'user',
+                        role: role,
                         perm_tasks: permTasks,
                         perm_personnel: permPersonnel,
                         perm_war_room: permWarRoom,
@@ -1105,7 +1116,7 @@
                     })
                 });
                 if (res.ok) {
-                    logAction('יצירה', `הוספת משתמש מערכת חדש: ${fullName} (${email})`);
+                    logAction('יצירה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
                     alert("משתמש נוצר בהצלחה!");
                     document.getElementById('new-user-name').value = '';
                     document.getElementById('new-user-email').value = '';
