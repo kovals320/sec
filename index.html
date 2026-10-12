@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ביטחון ניר אליהו</title>
+    <title>בטחון ניר אליהו</title>
 
     <!-- PWA Settings & Mobile Meta -->
     <link rel="manifest" href="/manifest.json">
@@ -136,13 +136,13 @@
                     <span id="user-display-name">--</span>
                 </div>
                 
-                <!-- כפתור לוג מערכת (רק למנהל) -->
+                <!-- כפתור לוג מערכת -->
                 <button id="btn-system-log" onclick="openLogsModal()" class="hidden px-2.5 py-1.5 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors" title="לוג מערכת">
                     <i data-lucide="history" class="w-3.5 h-3.5 text-amber-500"></i>
-                    <span class="hidden sm:inline">לוג מערכת</span>
+                    <span class="hidden sm:inline">לוג</span>
                 </button>
 
-                <!-- כפתור ניהול משתמשים (אייקון Users) -->
+                <!-- כפתור ניהול משתמשים -->
                 <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
                     <i data-lucide="users" class="w-4 h-4"></i>
                 </button>
@@ -153,8 +153,8 @@
             </div>
         </div>
 
-        <!-- 3 טאבים ראשיים -->
-        <div id="main-tabs-nav" class="grid grid-cols-3 gap-2 bg-[#131d38] p-1.5 border border-slate-800 rounded-2xl text-xs font-bold">
+        <!-- 4 טאבים ראשיים -->
+        <div id="main-tabs-nav" class="grid grid-cols-4 gap-1.5 bg-[#131d38] p-1.5 border border-slate-800 rounded-2xl text-xs font-bold">
             <button id="tab-btn-tasks" onclick="switchMainTab('tasks')" class="py-2.5 rounded-xl transition-all bg-amber-500 text-white shadow-md">
                 משימות
             </button>
@@ -163,6 +163,9 @@
             </button>
             <button id="tab-btn-war-room" onclick="switchMainTab('war-room')" class="py-2.5 rounded-xl transition-all text-slate-400 hover:text-white">
                 חמ"ל
+            </button>
+            <button id="tab-btn-cameras" onclick="switchMainTab('cameras')" class="py-2.5 rounded-xl transition-all text-slate-400 hover:text-white">
+                מצלמות
             </button>
         </div>
 
@@ -230,6 +233,23 @@
                 <h2 class="text-base font-bold text-white">צ'קליסט וניהול אירועי חמ"ל</h2>
                 <p class="text-xs text-slate-400">המערכת מוכנה להגדרת נוהל הפעלת חמ"ל בזמן חירום.</p>
             </div>
+        </div>
+
+        <!-- תוכן טאב 4: מצלמות -->
+        <div id="view-cameras" class="hidden space-y-4">
+            <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-4 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-10 h-10 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500">
+                        <i data-lucide="video" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-white">מצלמות אבטחה</h2>
+                        <p class="text-[10px] text-slate-400" id="cameras-count-label">0 מצלמות</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="cameras-list" class="space-y-2.5"></div>
         </div>
 
     </div>
@@ -340,7 +360,7 @@
                         <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="צח'י">צח"י</button>
                         <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="אקדוחנים">אקדוחנים</button>
                         <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="רחפנים">רחפנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'ל">חמ"ל</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'l">חמ"ל</button>
                     </div>
                 </div>
 
@@ -452,6 +472,7 @@
         let allSubtasks = [];
         let allPersonnel = [];
         let allUsers = [];
+        let allCameras = [];
 
         let selectedGroupsForForm = [];
 
@@ -623,6 +644,7 @@
                 document.getElementById('view-tasks').classList.add('hidden');
                 document.getElementById('view-personnel').classList.add('hidden');
                 document.getElementById('view-war-room').classList.add('hidden');
+                document.getElementById('view-cameras').classList.add('hidden');
             } else {
                 if (navTabs) navTabs.classList.remove('hidden');
                 if (noPermView) noPermView.classList.add('hidden');
@@ -647,20 +669,23 @@
 
         async function loadAllData() {
             try {
-                const [resT, resSub, resP, resU] = await Promise.all([
+                const [resT, resSub, resP, resU, resC] = await Promise.all([
                     fetch(`${SUPABASE_BASE_URL}/sec_tasks?select=*`, { headers: apiHeaders }),
                     fetch(`${SUPABASE_BASE_URL}/sec_subtasks?select=*`, { headers: apiHeaders }),
                     fetch(`${SUPABASE_BASE_URL}/sec_personnel?select=*`, { headers: apiHeaders }),
-                    fetch(`${SUPABASE_BASE_URL}/sec_users?select=*`, { headers: apiHeaders })
+                    fetch(`${SUPABASE_BASE_URL}/sec_users?select=*`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_BASE_URL}/sec_cameras?select=*`, { headers: apiHeaders })
                 ]);
 
                 if (resT.ok) allTasks = await resT.json();
                 if (resSub.ok) allSubtasks = await resSub.json();
                 if (resP.ok) allPersonnel = await resP.json();
                 if (resU.ok) allUsers = await resU.json();
+                if (resC.ok) allCameras = await resC.json();
 
                 renderTasks();
                 renderPersonnel();
+                renderCameras();
                 populateAssigneeDropdown();
             } catch (e) {}
         }
@@ -671,14 +696,17 @@
             const btnT = document.getElementById('tab-btn-tasks');
             const btnP = document.getElementById('tab-btn-personnel');
             const btnW = document.getElementById('tab-btn-war-room');
+            const btnC = document.getElementById('tab-btn-cameras');
 
             if (btnT) btnT.className = `py-2.5 rounded-xl transition-all ${tab === 'tasks' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
             if (btnP) btnP.className = `py-2.5 rounded-xl transition-all ${tab === 'personnel' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
             if (btnW) btnW.className = `py-2.5 rounded-xl transition-all ${tab === 'war-room' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            if (btnC) btnC.className = `py-2.5 rounded-xl transition-all ${tab === 'cameras' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
 
             document.getElementById('view-tasks').classList.toggle('hidden', tab !== 'tasks');
             document.getElementById('view-personnel').classList.toggle('hidden', tab !== 'personnel');
             document.getElementById('view-war-room').classList.toggle('hidden', tab !== 'war-room');
+            document.getElementById('view-cameras').classList.toggle('hidden', tab !== 'cameras');
         }
 
         function switchTaskSubtab(sub) {
@@ -843,6 +871,40 @@
                             </button>
                         </div>
                     ` : ''}
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function renderCameras() {
+            const list = document.getElementById('cameras-list');
+            const label = document.getElementById('cameras-count-label');
+
+            if (label) label.textContent = `${allCameras.length} מצלמות`;
+
+            if (!allCameras || allCameras.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">אין מצלמות להצגה בטבלה ב-Supabase</div>`;
+                return;
+            }
+
+            list.innerHTML = allCameras.map(c => `
+                <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-white">${c.name}</span>
+                            <span class="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md text-[10px] font-semibold">${c.area || 'כללי'}</span>
+                        </div>
+                        <div class="text-xs text-slate-400 flex items-center gap-2">
+                            <span>${c.nvr_name || 'NVR'}</span>
+                            ${c.channel_num ? `<span>• ערוץ ${c.channel_num}</span>` : ''}
+                        </div>
+                    </div>
+
+                    <a href="${c.app_url || 'provisioncam2://'}" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                        צפה במצלמה
+                    </a>
                 </div>
             `).join('');
 
@@ -1194,7 +1256,7 @@
                     })
                 });
                 if (res.ok) {
-                    logAction('יציאה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
+                    logAction('יצירה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
                     alert("משתמש נוצר בהצלחה!");
                     document.getElementById('new-user-name').value = '';
                     document.getElementById('new-user-email').value = '';
