@@ -36,7 +36,7 @@
 </head>
 <body class="min-h-screen pb-20 select-none">
 
-    <!-- מסך התחברות (Login) - שדות ריקים מראש -->
+    <!-- מסך התחברות (Login) -->
     <div id="login-screen" class="fixed inset-0 z-50 bg-[#0b1329] flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-6 w-full max-w-sm space-y-6 shadow-2xl">
             <div class="text-center space-y-2">
@@ -148,7 +148,6 @@
         <!-- תוכן טאב 1: משימות -->
         <div id="view-tasks" class="space-y-4">
             <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
-                <!-- כפתור הוספת משימה (רק לאדמין) -->
                 <button id="btn-add-task" onclick="openModal('modal-task')" class="hidden bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
                     <i data-lucide="plus" class="w-4 h-4"></i> הוסף
                 </button>
@@ -174,7 +173,6 @@
         <!-- תוכן טאב 2: כוח אדם -->
         <div id="view-personnel" class="hidden space-y-4">
             <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
-                <!-- כפתור הוספת איש צוות (רק לאדמין) -->
                 <button id="btn-add-personnel" onclick="openAddPersonnelModal()" class="hidden bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
                     <i data-lucide="user-plus" class="w-4 h-4"></i> הוספת איש צוות
                 </button>
@@ -206,7 +204,7 @@
 
     </div>
 
-    <!-- כפתור צף הוספה (+) - נגלה רק לאדמין -->
+    <!-- כפתור צף הוספה (+) -->
     <button id="fab-add-btn" onclick="handleFabClick()" class="hidden fixed bottom-6 left-6 w-14 h-14 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center transition-all z-40">
         <i data-lucide="plus" class="w-7 h-7"></i>
     </button>
@@ -312,7 +310,7 @@
                         <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="צח'י">צח"י</button>
                         <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="אקדוחנים">אקדוחנים</button>
                         <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="רחפנים">רחפנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'ל">חמ"ל</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'l">חמ"ל</button>
                     </div>
                 </div>
 
@@ -328,7 +326,7 @@
         </div>
     </div>
 
-    <!-- Modal 3: ניהול משתמשים והרשאות (רק למנהל) -->
+    <!-- Modal 3: ניהול משתמשים והרשאות (Super Admin בלבד) -->
     <div id="modal-admin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto">
             <button onclick="closeModal('modal-admin')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -337,11 +335,11 @@
 
             <h3 class="text-base font-bold text-white pr-2 flex items-center gap-2">
                 <i data-lucide="shield-check" class="w-5 h-5 text-amber-500"></i>
-                ניהול משתמשים והרשאות
+                ניהול משתמשים והרשאות טאבים
             </h3>
 
             <form onsubmit="addUser(event)" class="space-y-3 border-b border-slate-800 pb-4 text-xs">
-                <h4 class="font-bold text-amber-500">הוספת משתמש חדש (עם סיסמה ראשונית)</h4>
+                <h4 class="font-bold text-amber-500">הוספת משתמש חדש</h4>
                 <div class="grid grid-cols-2 gap-2">
                     <input type="text" id="new-user-name" placeholder="שם מלא" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
                     <input type="email" id="new-user-email" placeholder="אימייל" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
@@ -367,18 +365,18 @@
                 </div>
 
                 <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl transition-all">
-                    צור משתמש
+                    צור משתמש חדש
                 </button>
             </form>
 
             <div class="space-y-2">
-                <h4 class="font-bold text-xs text-slate-400">משתמשים במערכת</h4>
+                <h4 class="font-bold text-xs text-slate-400">משתמשים קיימים (שינוי הרשאות בלחיצה)</h4>
                 <div id="users-list" class="space-y-2 text-xs"></div>
             </div>
         </div>
     </div>
 
-    <!-- Modal 5: לוג מערכת (רק למנהלים) -->
+    <!-- Modal 5: לוג מערכת -->
     <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative max-h-[85vh] overflow-y-auto">
             <button onclick="closeModal('modal-logs')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -540,24 +538,22 @@
 
             const isAdmin = currentUser.role === 'admin';
 
-            // שליטה על כפתורים הזמינים רק לאדמין
-            if (isAdmin) {
-                document.getElementById('btn-admin-panel').classList.remove('hidden');
-                document.getElementById('btn-system-log').classList.remove('hidden');
-                document.getElementById('btn-add-personnel').classList.remove('hidden');
-                document.getElementById('btn-add-task').classList.remove('hidden');
-                document.getElementById('fab-add-btn').classList.remove('hidden');
-            } else {
-                document.getElementById('btn-admin-panel').classList.add('hidden');
-                document.getElementById('btn-system-log').classList.add('hidden');
-                document.getElementById('btn-add-personnel').classList.add('hidden');
-                document.getElementById('btn-add-task').classList.add('hidden');
-                document.getElementById('fab-add-btn').classList.add('hidden');
-            }
+            const adminElements = ['btn-admin-panel', 'btn-system-log', 'btn-add-personnel', 'btn-add-task', 'fab-add-btn'];
+            adminElements.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (isAdmin) el.classList.remove('hidden');
+                    else el.classList.add('hidden');
+                }
+            });
 
-            document.getElementById('tab-btn-tasks').style.display = currentUser.perm_tasks ? 'block' : 'none';
-            document.getElementById('tab-btn-personnel').style.display = currentUser.perm_personnel ? 'block' : 'none';
-            document.getElementById('tab-btn-war-room').style.display = currentUser.perm_war_room ? 'block' : 'none';
+            const btnT = document.getElementById('tab-btn-tasks');
+            const btnP = document.getElementById('tab-btn-personnel');
+            const btnW = document.getElementById('tab-btn-war-room');
+
+            if (btnT) btnT.style.display = currentUser.perm_tasks ? 'block' : 'none';
+            if (btnP) btnP.style.display = currentUser.perm_personnel ? 'block' : 'none';
+            if (btnW) btnW.style.display = currentUser.perm_war_room ? 'block' : 'none';
 
             if (currentUser.perm_tasks) switchMainTab('tasks');
             else if (currentUser.perm_personnel) switchMainTab('personnel');
@@ -712,7 +708,7 @@
                                                 <i data-lucide="trash-2" class="w-4 h-4"></i>
                                             </button>
                                         </div>
-                                    ` : '<div></div>'}
+                                    ` : '<div class="text-[11px] text-slate-500 font-medium">מצב צפייה בלבד</div>'}
                                 </div>
                             </div>
                         ` : ''}
@@ -812,7 +808,10 @@
         }
 
         function openModal(id) {
-            if (currentUser && currentUser.role !== 'admin' && (id === 'modal-task' || id === 'modal-personnel' || id === 'modal-admin' || id === 'modal-logs')) {
+            const isAdmin = currentUser && currentUser.role === 'admin';
+            const restrictedModals = ['modal-task', 'modal-personnel', 'modal-admin', 'modal-logs'];
+
+            if (!isAdmin && restrictedModals.includes(id)) {
                 return;
             }
             document.getElementById(id).classList.remove('hidden');
@@ -1035,19 +1034,45 @@
                         <span class="text-[10px] font-bold px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-500' : 'bg-slate-800 text-slate-400'}">${u.role}</span>
                     </div>
 
-                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px]">
-                        <div class="flex items-center gap-2 text-slate-400">
-                            <span>משימות: ${u.perm_tasks ? '✅' : '❌'}</span>
-                            <span>כח אדם: ${u.perm_personnel ? '✅' : '❌'}</span>
-                            <span>חמ"ל: ${u.perm_war_room ? '✅' : '❌'}</span>
+                    <div class="pt-2 border-t border-slate-800/80 space-y-2">
+                        <span class="text-[10px] font-semibold text-slate-400 block">הרשאות צפייה בטאבים:</span>
+                        <div class="flex items-center justify-between gap-2 text-xs">
+                            <label class="flex items-center gap-1 text-slate-300 cursor-pointer">
+                                <input type="checkbox" onchange="updateUserPermissions(${u.id}, 'perm_tasks', this.checked)" ${u.perm_tasks ? 'checked' : ''} class="rounded border-slate-700 bg-[#0d162e] text-amber-500"> משימות
+                            </label>
+                            <label class="flex items-center gap-1 text-slate-300 cursor-pointer">
+                                <input type="checkbox" onchange="updateUserPermissions(${u.id}, 'perm_personnel', this.checked)" ${u.perm_personnel ? 'checked' : ''} class="rounded border-slate-700 bg-[#0d162e] text-amber-500"> כח אדם
+                            </label>
+                            <label class="flex items-center gap-1 text-slate-300 cursor-pointer">
+                                <input type="checkbox" onchange="updateUserPermissions(${u.id}, 'perm_war_room', this.checked)" ${u.perm_war_room ? 'checked' : ''} class="rounded border-slate-700 bg-[#0d162e] text-amber-500"> חמ"ל
+                            </label>
                         </div>
 
                         ${u.email !== 'admin@kne.org.il' ? `
-                            <button onclick="deleteUser(${u.id})" class="text-red-400 hover:underline">מחק</button>
+                            <div class="flex justify-end pt-1">
+                                <button onclick="deleteUser(${u.id})" class="text-red-400 text-[10px] hover:underline">מחק משתמש</button>
+                            </div>
                         ` : ''}
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function updateUserPermissions(userId, permField, isChecked) {
+            try {
+                const payload = {};
+                payload[permField] = isChecked;
+
+                await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${userId}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify(payload)
+                });
+
+                logAction('עדכון', `עדכון הרשאת ${permField} למשתמש #${userId} ל-${isChecked}`);
+            } catch (err) {
+                alert("שגיאה בעדכון הרשאות המשתמש");
+            }
         }
 
         async function addUser(e) {
@@ -1082,6 +1107,10 @@
                 if (res.ok) {
                     logAction('יצירה', `הוספת משתמש מערכת חדש: ${fullName} (${email})`);
                     alert("משתמש נוצר בהצלחה!");
+                    document.getElementById('new-user-name').value = '';
+                    document.getElementById('new-user-email').value = '';
+                    document.getElementById('new-user-phone').value = '';
+                    document.getElementById('new-user-password').value = '';
                     loadUsers();
                 }
             } catch (err) {}
