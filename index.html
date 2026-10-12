@@ -287,7 +287,7 @@
 
                 <div class="pt-2 space-y-2">
                     <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
-                        הוסף משימה
+                        שמור משימה
                     </button>
                     <button type="button" onclick="closeModal('modal-task')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
                         ביטול
@@ -341,7 +341,7 @@
 
                 <div class="pt-2 space-y-2">
                     <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
-                        הוסף
+                        שמור
                     </button>
                     <button type="button" onclick="closeModal('modal-personnel')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
                         ביטול
@@ -536,7 +536,7 @@
                     } else {
                         currentUser = u;
                         localStorage.setItem('sec_user', JSON.stringify(currentUser));
-                        logAction('כניסה', 'התחברות למערכת');
+                        await logAction('כניסה', 'התחברות למערכת');
                         initApp();
                     }
                 } else {
@@ -570,7 +570,7 @@
                     currentUser = { ...pendingUser, password: p1, must_change_password: false };
                     pendingUser = null;
                     localStorage.setItem('sec_user', JSON.stringify(currentUser));
-                    logAction('עדכון', 'החלפת סיסמה ראשונית בכניסה למערכת');
+                    await logAction('עדכון', 'החלפת סיסמה ראשונית בכניסה למערכת');
                     initApp();
                 }
             } catch (err) {
@@ -578,9 +578,9 @@
             }
         }
 
-        function handleLogout() {
+        async function handleLogout() {
             if (currentUser) {
-                logAction('יציאה', 'התנתקות מהמערכת');
+                await logAction('יציאה', 'התנתקות מהמערכת');
             }
             localStorage.removeItem('sec_user');
             currentUser = null;
@@ -960,10 +960,10 @@
             try {
                 if (editId) {
                     await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
-                    logAction('עדכון', `עדכון משימה: "${title}"`);
+                    await logAction('עדכון', `עדכון משימה: "${title}"`);
                 } else {
                     await fetch(`${SUPABASE_BASE_URL}/sec_tasks`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
-                    logAction('יצירה', `יצירת משימה חדשה: "${title}" (${type})`);
+                    await logAction('יצירה', `יצירת משימה חדשה: "${title}" (${type})`);
                 }
                 closeModal('modal-task');
                 loadAllData();
@@ -1008,10 +1008,10 @@
             try {
                 if (editId) {
                     await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
-                    logAction('עדכון', `עדכון איש צוות: ${fullName}`);
+                    await logAction('עדכון', `עדכון איש צוות: ${fullName}`);
                 } else {
                     await fetch(`${SUPABASE_BASE_URL}/sec_personnel`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
-                    logAction('יצירה', `הוספת איש צוות חדש: ${fullName}`);
+                    await logAction('יצירה', `הוספת איש צוות חדש: ${fullName}`);
                 }
                 closeModal('modal-personnel');
                 loadAllData();
@@ -1030,7 +1030,7 @@
                     headers: apiHeaders,
                     body: JSON.stringify({ task_id: taskId, title: title.trim() })
                 });
-                logAction('יצירה', `הוספת תת-משימה: "${title.trim()}"`);
+                await logAction('יצירה', `הוספת תת-משימה: "${title.trim()}"`);
                 loadAllData();
             } catch (e) {}
         }
@@ -1038,13 +1038,14 @@
         async function toggleTaskComplete(id, completed) {
             const t = allTasks.find(item => item.id === id);
             await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
-            logAction('עדכון', `סימון משימה "${t?.title || id}" כ${completed ? 'הושלמה' : 'פעילה'}`);
+            await logAction('עדכון', `סימון משימה "${t?.title || id}" כ${completed ? 'הושלמה' : 'פעילה'}`);
             loadAllData();
         }
 
         async function toggleSubtaskComplete(id, completed) {
+            const sub = allSubtasks.find(item => item.id === id);
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
-            logAction('עדכון', `סימון תת-משימה כ${completed ? 'הושלמה' : 'פעילה'}`);
+            await logAction('עדכון', `סימון תת-משימה "${sub?.title || id}" כ${completed ? 'הושלמה' : 'פעילה'}`);
             loadAllData();
         }
 
@@ -1054,15 +1055,16 @@
             const t = allTasks.find(item => item.id === id);
             if (!confirm("למחוק משימה זו?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
-            logAction('מחיקה', `מחיקת משימה: "${t?.title || id}"`);
+            await logAction('מחיקה', `מחיקת משימה: "${t?.title || id}"`);
             loadAllData();
         }
 
         async function deleteSubtask(id) {
             if (currentUser && currentUser.role !== 'admin') return;
 
+            const sub = allSubtasks.find(item => item.id === id);
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
-            logAction('מחיקה', `מחיקת תת-משימה`);
+            await logAction('מחיקה', `מחיקת תת-משימה: "${sub?.title || id}"`);
             loadAllData();
         }
 
@@ -1072,7 +1074,7 @@
             const p = allPersonnel.find(item => item.id === id);
             if (!confirm("למחוק איש צוות זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
-            logAction('מחיקה', `מחיקת איש צוות: ${p?.full_name || id}`);
+            await logAction('מחיקה', `מחיקת איש צוות: ${p?.full_name || id}`);
             loadAllData();
         }
 
@@ -1139,9 +1141,9 @@
                 });
 
                 if (res.ok) {
-                    logAction('עדכון', `עדכון הרשאת ${permField} למשתמש #${userId} ל-${isChecked}`);
                     const u = allUsers.find(item => item.id === userId);
                     if (u) u[permField] = isChecked;
+                    await logAction('עדכון', `עדכון הרשאת ${permField} למשתמש ${u?.full_name || userId} ל-${isChecked}`);
                 }
             } catch (err) {
                 alert("שגיאה בעדכון הרשאות המשתמש");
@@ -1179,7 +1181,7 @@
                     })
                 });
                 if (res.ok) {
-                    logAction('יצירה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
+                    await logAction('יצירה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
                     alert("משתמש נוצר בהצלחה!");
                     document.getElementById('new-user-name').value = '';
                     document.getElementById('new-user-email').value = '';
@@ -1196,7 +1198,7 @@
             const u = allUsers.find(item => item.id === id);
             if (!confirm("למחוק משתמש זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
-            logAction('מחיקה', `מחיקת משתמש מערכת: ${u?.full_name || id}`);
+            await logAction('מחיקה', `מחיקת משתמש מערכת: ${u?.full_name || id}`);
             loadUsers();
         }
 
@@ -1232,7 +1234,7 @@
                         `;
                     }).join('');
                 } else {
-                    container.innerHTML = `<div class="text-center py-6 text-red-400">לא ניתן שטוען את הלוגים. לוודא שהטבלה sec_log קיימת.</div>`;
+                    container.innerHTML = `<div class="text-center py-6 text-red-400">לא ניתן לטעון את הלוגים. יש לוודא שטבלת sec_log קיימת.</div>`;
                 }
             } catch (e) {
                 container.innerHTML = `<div class="text-center py-6 text-red-400">שגיאה שטעינת הלוגים</div>`;
