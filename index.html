@@ -117,11 +117,11 @@
                 
                 <!-- כפתור לוג מערכת (רק למנהל) -->
                 <button id="btn-system-log" onclick="openLogsModal()" class="hidden px-2.5 py-1.5 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors" title="לוג מערכת">
-                    <i data-lucide="scroll" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <i data-lucide="history" class="w-3.5 h-3.5 text-amber-500"></i>
                     <span class="hidden sm:inline">לוג מערכת</span>
                 </button>
 
-                <!-- כפתור ניהול משתמשים - עודכן לאייקון משתמשים (Users) -->
+                <!-- כפתור ניהול משתמשים (אייקון Users) -->
                 <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
                     <i data-lucide="users" class="w-4 h-4"></i>
                 </button>
@@ -389,7 +389,7 @@
         </div>
     </div>
 
-    <!-- Modal 5: לוג מערכת (תצוגת שורות בלבד) -->
+    <!-- Modal 5: לוג מערכת -->
     <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative max-h-[85vh] overflow-y-auto">
             <button onclick="closeModal('modal-logs')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -397,7 +397,7 @@
             </button>
 
             <h3 class="text-base font-bold text-white pr-2 flex items-center gap-2">
-                <i data-lucide="scroll" class="w-5 h-5 text-amber-500"></i>
+                <i data-lucide="history" class="w-5 h-5 text-amber-500"></i>
                 לוג מערכת - תיעוד פעולות
             </h3>
 
@@ -452,7 +452,6 @@
         async function logAction(actionType, details) {
             if (!currentUser) return;
             try {
-                // עדכון שם הטבלה ל-sec_log מול Supabase
                 await fetch(`${SUPABASE_BASE_URL}/sec_log`, {
                     method: 'POST',
                     headers: apiHeaders,
@@ -591,6 +590,9 @@
 
                 loadAllData();
             }
+
+            // רינדור מחודש של אייקוני lucide
+            setTimeout(() => { lucide.createIcons(); }, 50);
         }
 
         async function loadAllData() {
@@ -846,6 +848,7 @@
                 return;
             }
             document.getElementById(id).classList.remove('hidden');
+            lucide.createIcons();
         }
 
         function closeModal(id) {
@@ -1174,12 +1177,12 @@
                 const res = await fetch(`${SUPABASE_BASE_URL}/sec_log?select=*&order=created_at.desc&limit=100`, { headers: apiHeaders });
                 if (res.ok) {
                     const logs = await res.json();
-                    if (logs.length === 0) {
+                    if (!logs || logs.length === 0) {
                         container.innerHTML = `<div class="text-center py-6 text-slate-500">אין לוגים רשומים עדיין</div>`;
                         return;
                     }
 
-                    // רנדור שורות טקסט פשוטות וקריאות
+                    // תצוגת שורות טקסט קריאה
                     container.innerHTML = logs.map(l => {
                         const d = new Date(l.created_at);
                         const dateStr = d.toLocaleDateString('he-IL');
@@ -1189,12 +1192,14 @@
                             <div class="bg-[#0b1329] p-2.5 px-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-2">
                                 <div class="truncate">
                                     <span class="font-bold text-amber-500">${l.user_name || 'מערכת'}</span>
-                                    <span class="text-slate-400"> - ${l.details || l.action_type || ''}</span>
+                                    <span class="text-slate-300"> - ${l.details || l.action_type || ''}</span>
                                 </div>
                                 <span class="text-[10px] text-slate-500 shrink-0 font-mono">${dateStr} ${timeStr}</span>
                             </div>
                         `;
                     }).join('');
+                } else {
+                    container.innerHTML = `<div class="text-center py-6 text-red-400">לא ניתן שטוען את הלוגים. לוודא שהטבלה sec_log קיימת.</div>`;
                 }
             } catch (e) {
                 container.innerHTML = `<div class="text-center py-6 text-red-400">שגיאה שטעינת הלוגים</div>`;
