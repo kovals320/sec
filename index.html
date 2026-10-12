@@ -877,16 +877,16 @@
             lucide.createIcons();
         }
 
-        function openCameraApp(url) {
-            if (!url) url = 'provisioncam2://';
-            
-            // ניסיון פתיחה ישיר
-            window.location.href = url;
-            
-            // השהיה קצרה למקרה שהאפליקציה לא מותקנת/לא נפתחת בדפדפן המובנה
-            setTimeout(() => {
-                alert("אם האפליקציה לא נפתחה אוטומטית, ודא שאפליקציית Provision Cam2 מותקנת בנייד.");
-            }, 1500);
+        function getCameraDeepLink(appUrl) {
+            if (!appUrl) appUrl = 'provisioncam2://';
+
+            const isAndroid = /Android/i.test(navigator.userAgent);
+
+            if (isAndroid) {
+                return 'intent://open#Intent;scheme=provisioncam2;package=com.provision.provisioncam2;end;';
+            }
+
+            return appUrl;
         }
 
         function renderCameras() {
@@ -900,25 +900,29 @@
                 return;
             }
 
-            list.innerHTML = allCameras.map(c => `
-                <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
-                    <div class="space-y-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-bold text-white">${c.name}</span>
-                            <span class="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md text-[10px] font-semibold">${c.area || 'כללי'}</span>
-                        </div>
-                        <div class="text-xs text-slate-400 flex items-center gap-2">
-                            <span>${c.nvr_name || 'NVR'}</span>
-                            ${c.channel_num ? `<span>• ערוץ ${c.channel_num}</span>` : ''}
-                        </div>
-                    </div>
+            list.innerHTML = allCameras.map(c => {
+                const targetUrl = getCameraDeepLink(c.app_url);
 
-                    <button onclick="openCameraApp('${c.app_url || 'provisioncam2://'}')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
-                        <i data-lucide="external-link" class="w-4 h-4"></i>
-                        צפה במצלמה
-                    </button>
-                </div>
-            `).join('');
+                return `
+                    <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-bold text-white">${c.name}</span>
+                                <span class="bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-md text-[10px] font-semibold">${c.area || 'כללי'}</span>
+                            </div>
+                            <div class="text-xs text-slate-400 flex items-center gap-2">
+                                <span>${c.nvr_name || 'NVR'}</span>
+                                ${c.channel_num ? `<span>• ערוץ ${c.channel_num}</span>` : ''}
+                            </div>
+                        </div>
+
+                        <a href="${targetUrl}" target="_self" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
+                            <i data-lucide="external-link" class="w-4 h-4"></i>
+                            צפה במצלמה
+                        </a>
+                    </div>
+                `;
+            }).join('');
 
             lucide.createIcons();
         }
