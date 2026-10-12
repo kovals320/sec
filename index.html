@@ -121,9 +121,9 @@
                     <span class="hidden sm:inline">לוג מערכת</span>
                 </button>
 
-                <!-- כפתור ניהול משתמשים (רק למנהל) -->
+                <!-- כפתור ניהול משתמשים - עודכן לאייקון משתמשים (Users) -->
                 <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
-                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                    <i data-lucide="users" class="w-4 h-4"></i>
                 </button>
 
                 <button onclick="handleLogout()" class="p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-400 hover:text-red-400 transition-colors" title="התנתק">
@@ -343,7 +343,7 @@
             </button>
 
             <h3 class="text-base font-bold text-white pr-2 flex items-center gap-2">
-                <i data-lucide="shield-check" class="w-5 h-5 text-amber-500"></i>
+                <i data-lucide="users" class="w-5 h-5 text-amber-500"></i>
                 ניהול משתמשים והרשאות טאבים
             </h3>
 
@@ -389,7 +389,7 @@
         </div>
     </div>
 
-    <!-- Modal 5: לוג מערכת -->
+    <!-- Modal 5: לוג מערכת (תצוגת שורות בלבד) -->
     <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative max-h-[85vh] overflow-y-auto">
             <button onclick="closeModal('modal-logs')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -401,7 +401,7 @@
                 לוג מערכת - תיעוד פעולות
             </h3>
 
-            <div id="logs-container" class="space-y-2 text-xs">
+            <div id="logs-container" class="space-y-1.5 text-xs">
                 <div class="text-center py-6 text-slate-500">טוען לוגים...</div>
             </div>
         </div>
@@ -452,7 +452,8 @@
         async function logAction(actionType, details) {
             if (!currentUser) return;
             try {
-                await fetch(`${SUPABASE_BASE_URL}/sec_logs`, {
+                // עדכון שם הטבלה ל-sec_log מול Supabase
+                await fetch(`${SUPABASE_BASE_URL}/sec_log`, {
                     method: 'POST',
                     headers: apiHeaders,
                     body: JSON.stringify({
@@ -1169,7 +1170,8 @@
             container.innerHTML = `<div class="text-center py-6 text-slate-500">טוען לוגים...</div>`;
 
             try {
-                const res = await fetch(`${SUPABASE_BASE_URL}/sec_logs?select=*&order=created_at.desc&limit=100`, { headers: apiHeaders });
+                // טעינת הלוגים מטבלת sec_log
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_log?select=*&order=created_at.desc&limit=100`, { headers: apiHeaders });
                 if (res.ok) {
                     const logs = await res.json();
                     if (logs.length === 0) {
@@ -1177,28 +1179,19 @@
                         return;
                     }
 
+                    // רנדור שורות טקסט פשוטות וקריאות
                     container.innerHTML = logs.map(l => {
                         const d = new Date(l.created_at);
                         const dateStr = d.toLocaleDateString('he-IL');
                         const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-                        let typeColor = 'bg-slate-800 text-slate-300';
-                        if (l.action_type === 'כניסה') typeColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
-                        else if (l.action_type === 'יציאה') typeColor = 'bg-slate-700 text-slate-400';
-                        else if (l.action_type === 'יצירה') typeColor = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
-                        else if (l.action_type === 'מחיקה') typeColor = 'bg-red-500/20 text-red-400 border border-red-500/30';
-                        else if (l.action_type === 'עדכון') typeColor = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
-
                         return `
-                            <div class="bg-[#0b1329] p-3 rounded-2xl border border-slate-800/80 space-y-1">
-                                <div class="flex items-center justify-between">
-                                    <div class="flex items-center gap-2">
-                                        <span class="font-bold text-white">${l.user_name}</span>
-                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-lg ${typeColor}">${l.action_type}</span>
-                                    </div>
-                                    <span class="text-[10px] text-slate-500">${dateStr} ${timeStr}</span>
+                            <div class="bg-[#0b1329] p-2.5 px-3 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-2">
+                                <div class="truncate">
+                                    <span class="font-bold text-amber-500">${l.user_name || 'מערכת'}</span>
+                                    <span class="text-slate-400"> - ${l.details || l.action_type || ''}</span>
                                 </div>
-                                <p class="text-slate-300 leading-normal">${l.details}</p>
+                                <span class="text-[10px] text-slate-500 shrink-0 font-mono">${dateStr} ${timeStr}</span>
                             </div>
                         `;
                     }).join('');
