@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ביטחון ניר אליהו</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Tailwind CSS & Lucide Icons -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Rubik', sans-serif;
+            background-color: #0b1329;
+            color: #f1f5f9;
+        }
+        /* Custom Scrollbar for Dark Mode */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 select-none">
+
+    <!-- מסך התחברות (Login) -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-[#0b1329] flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-6 w-full max-w-sm space-y-6 shadow-2xl">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-3xl">
+                    🛡️
+                </div>
+                <h1 class="text-xl font-bold text-white">ביטחון ניר אליהו</h1>
+                <p class="text-xs text-slate-400">התחברות למערכת ניהול משימות וכח אדם</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">אימייל / שם משתמש</label>
+                    <input type="email" id="login-email" required value="admin@kne.org.il"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-slate-400 mb-1">סיסמה</label>
+                    <input type="password" id="login-password" required value="123456"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-sm text-white focus:outline-none focus:border-amber-500 transition-colors">
+                </div>
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
+                    התחבר למערכת
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- האפליקציה הראשית (מוסתרת עד להתחברות) -->
+    <div id="app-content" class="hidden max-w-xl mx-auto px-4 py-4 space-y-5">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between bg-[#131d38] border border-slate-800/80 rounded-3xl p-3.5 px-4 shadow-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-lg">
+                    🛡️
+                </div>
+                <div>
+                    <h1 class="text-sm font-bold text-white leading-tight">ביטחון ניר אליהו</h1>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <div id="user-badge" class="flex items-center gap-1.5 bg-[#0b1329] border border-slate-700/60 px-3 py-1.5 rounded-2xl text-xs font-semibold text-slate-300">
+                    <i data-lucide="user" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <span id="user-display-name">--</span>
+                </div>
+                
+                <!-- כפתור ניהול משתמשים (רק למנהל) -->
+                <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
+                    <i data-lucide="shield-check" class="w-4 h-4"></i>
+                </button>
+
+                <button onclick="handleLogout()" class="p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-400 hover:text-red-400 transition-colors" title="התנתק">
+                    <i data-lucide="log-out" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 3 טאבים ראשיים -->
+        <div id="main-tabs-nav" class="grid grid-cols-3 gap-2 bg-[#131d38] p-1.5 border border-slate-800 rounded-2xl text-xs font-bold">
+            <button id="tab-btn-tasks" onclick="switchMainTab('tasks')" class="py-2.5 rounded-xl transition-all bg-amber-500 text-white shadow-md">
+                משימות
+            </button>
+            <button id="tab-btn-personnel" onclick="switchMainTab('personnel')" class="py-2.5 rounded-xl transition-all text-slate-400 hover:text-white">
+                כח אדם
+            </button>
+            <button id="tab-btn-war-room" onclick="switchMainTab('war-room')" class="py-2.5 rounded-xl transition-all text-slate-400 hover:text-white">
+                חמ"ל
+            </button>
+        </div>
+
+        <!-- תוכן טאב 1: משימות -->
+        <div id="view-tasks" class="space-y-4">
+            <!-- סרגל תתי-טאבים (שוטף / פרויקט) -->
+            <div class="flex items-center justify-between bg-[#131d38] p-2 border border-slate-800 rounded-2xl">
+                <div class="flex items-center gap-2 px-2 text-xs text-slate-400">
+                    <i data-lucide="list-checks" class="w-4 h-4 text-amber-500"></i>
+                    <span id="tasks-count-label" class="font-bold text-white">0 פעילויות</span>
+                </div>
+
+                <div class="flex bg-[#0b1329] p-1 rounded-xl border border-slate-800 text-xs font-semibold">
+                    <button id="subtab-btn-routine" onclick="switchTaskSubtab('שוטף')" class="px-4 py-1.5 rounded-lg transition-all bg-amber-500 text-white">
+                        שוטף
+                    </button>
+                    <button id="subtab-btn-project" onclick="switchTaskSubtab('פרויקט')" class="px-4 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white">
+                        פרויקט
+                    </button>
+                </div>
+            </div>
+
+            <!-- רשימת כרטיסי משימות -->
+            <div id="tasks-list" class="space-y-3">
+                <!-- מיוצר דינמית -->
+            </div>
+        </div>
+
+        <!-- תוכן טאב 2: כוח אדם -->
+        <div id="view-personnel" class="hidden space-y-4">
+            <!-- סינון קבוצות -->
+            <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
+                <button onclick="filterPersonnel('הכל')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-amber-500 text-white font-bold whitespace-nowrap shadow-sm">הכל</button>
+                <button onclick="filterPersonnel('כיתת כוננות')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">כיתת כוננות</button>
+                <button onclick="filterPersonnel('צח\'י')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">צח"י</button>
+                <button onclick="filterPersonnel('אקדוחנים')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">אקדוחנים</button>
+                <button onclick="filterPersonnel('רחפנים')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">רחפנים</button>
+                <button onclick="filterPersonnel('חמ\'ל')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">חמ"ל</button>
+            </div>
+
+            <div id="personnel-list" class="space-y-2.5">
+                <!-- מיוצר דינמית -->
+            </div>
+        </div>
+
+        <!-- תוכן טאב 3: חמ"ל -->
+        <div id="view-war-room" class="hidden space-y-4">
+            <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-6 text-center space-y-3">
+                <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-2xl">
+                    📻
+                </div>
+                <h2 class="text-base font-bold text-white">צ'קליסט וניהול אירועי חמ"ל</h2>
+                <p class="text-xs text-slate-400">המערכת מוכנה להגדרת נוהל הפעלת חמ"ל בזמן חירום.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- כפתור צף הוספה (+) -->
+    <button id="fab-add-btn" onclick="handleFabClick()" class="hidden fixed bottom-6 left-6 w-14 h-14 bg-amber-500 hover:bg-amber-600 active:scale-95 text-white rounded-full shadow-2xl shadow-amber-500/40 flex items-center justify-center transition-all z-40">
+        <i data-lucide="plus" class="w-7 h-7"></i>
+    </button>
+
+    <!-- Modal 1: משימה חדשה / עריכת משימה -->
+    <div id="modal-task" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative animate-in fade-in zoom-in-95 duration-150">
+            <button onclick="closeModal('modal-task')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 id="modal-task-title" class="text-base font-bold text-white pr-2">משימה חדשה</h3>
+
+            <form onsubmit="saveTask(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="task-edit-id" value="">
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">סוג משימה</label>
+                    <select id="task-type" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                        <option value="שוטף">שוטף</option>
+                        <option value="פרויקט">פרויקט</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">כותרת</label>
+                    <input type="text" id="task-title" placeholder="כותרת קצרה למשימה" required
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">תוכן</label>
+                    <textarea id="task-content" rows="3" placeholder="פרטי המשימה, הערות, מידע מורחב..."
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">תאריך יעד</label>
+                    <input type="date" id="task-due-date"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-semibold text-slate-400">אחראי</label>
+                        <button type="button" onclick="toggleManualAssignee()" class="text-amber-500 hover:underline flex items-center gap-1 font-semibold">
+                            <i data-lucide="pencil" class="w-3 h-3"></i> מילוי ידני
+                        </button>
+                    </div>
+                    
+                    <select id="task-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                        <!-- מיוצר דינמית מרשימת כוח האדם -->
+                    </select>
+                    
+                    <input type="text" id="task-assignee-input" placeholder="שם האחראי" class="hidden w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div class="pt-2 space-y-2">
+                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
+                        הוסף משימה
+                    </button>
+                    <button type="button" onclick="closeModal('modal-task')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
+                        ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 2: הוספת/עריכת איש צוות -->
+    <div id="modal-personnel" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative animate-in fade-in zoom-in-95 duration-150">
+            <button onclick="closeModal('modal-personnel')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="text-base font-bold text-white pr-2">הוספת איש צוות</h3>
+
+            <form onsubmit="savePersonnel(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="personnel-edit-id" value="">
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">שם</label>
+                    <input type="text" id="personnel-name" placeholder="שם מלא" required
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">תפקיד</label>
+                    <input type="text" id="personnel-role" placeholder="לדוגמה: מפקד כיתה"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">טלפון</label>
+                    <input type="tel" id="personnel-phone" placeholder="ניתן למלא מאוחר יותר"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-2">קבוצות</label>
+                    <div class="flex flex-wrap gap-2">
+                        <button type="button" onclick="toggleGroupChip(this, 'כיתת כוננות')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">כיתת כוננות</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">צח"י</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">אקדוחנים</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">רחפנים</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">חמ"ל</button>
+                    </div>
+                </div>
+
+                <div class="pt-2 space-y-2">
+                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
+                        הוסף
+                    </button>
+                    <button type="button" onclick="closeModal('modal-personnel')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
+                        ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: ניהול משתמשים והרשאות (רק למנהל) -->
+    <div id="modal-admin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto">
+            <button onclick="closeModal('modal-admin')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="text-base font-bold text-white pr-2 flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-5 h-5 text-amber-500"></i>
+                ניהול משתמשים והרשאות
+            </h3>
+
+            <!-- טופס הוספת משתמש -->
+            <form onsubmit="addUser(event)" class="space-y-3 border-b border-slate-800 pb-4 text-xs">
+                <h4 class="font-bold text-amber-500">הוספת משתמש חדש</h4>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="text" id="new-user-name" placeholder="שם מלא" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                    <input type="email" id="new-user-email" placeholder="אימייל" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="tel" id="new-user-phone" placeholder="טלפון" class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                    <input type="password" id="new-user-password" placeholder="סיסמה" required class="px-3 py-2.5 rounded-xl bg-[#0b1329] border border-slate-700/80 text-white">
+                </div>
+
+                <div class="space-y-1 pt-1">
+                    <label class="block font-semibold text-slate-400">הרשאות צפייה בטאבים:</label>
+                    <div class="flex items-center gap-4 text-slate-300 font-medium">
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="new-user-p-tasks" checked class="rounded border-slate-700 bg-[#0b1329] text-amber-500"> משימות
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="new-user-p-personnel" class="rounded border-slate-700 bg-[#0b1329] text-amber-500"> כח אדם
+                        </label>
+                        <label class="flex items-center gap-1.5 cursor-pointer">
+                            <input type="checkbox" id="new-user-p-war-room" class="rounded border-slate-700 bg-[#0b1329] text-amber-500"> חמ"ל
+                        </label>
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl transition-all">
+                    צור משתמש
+                </button>
+            </form>
+
+            <!-- רשימת משתמשים קיימים -->
+            <div class="space-y-2">
+                <h4 class="font-bold text-xs text-slate-400">משתמשים במערכת</h4>
+                <div id="users-list" class="space-y-2 text-xs">
+                    <!-- מיוצר דינמית -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Script Application Logic -->
+    <script>
+        const SUPABASE_BASE_URL = 'https://pjujibzoscawmstarerz.supabase.co/rest/v1';
+        const SUPABASE_KEY = 'sb_publishable_5mK3Md5VCpXjHTSgVv68GQ_8kmPbg83';
+
+        const apiHeaders = {
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'return=representation'
+        };
+
+        let currentUser = null;
+        let currentMainTab = 'tasks';
+        let currentTaskSubtab = 'שוטף';
+        let selectedPersonnelGroup = 'הכל';
+
+        let allTasks = [];
+        let allSubtasks = [];
+        let allPersonnel = [];
+        let allUsers = [];
+
+        let selectedGroupsForForm = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            checkSavedSession();
+        });
+
+        function checkSavedSession() {
+            const saved = localStorage.getItem('sec_user');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                initApp();
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value.trim();
+
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_users?email=eq.${encodeURIComponent(email)}&password=eq.${encodeURIComponent(password)}`, { headers: apiHeaders });
+                const users = await res.json();
+
+                if (users && users.length > 0) {
+                    currentUser = users[0];
+                    localStorage.setItem('sec_user', JSON.stringify(currentUser));
+                    initApp();
+                } else {
+                    alert("פרטי התחברות שגויים");
+                }
+            } catch (err) {
+                alert("שגיאה בהתחברות למערכת");
+            }
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('sec_user');
+            currentUser = null;
+            document.getElementById('login-screen').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('fab-add-btn').classList.add('hidden');
+        }
+
+        function initApp() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('fab-add-btn').classList.remove('hidden');
+
+            document.getElementById('user-display-name').textContent = currentUser.full_name;
+
+            if (currentUser.role === 'admin') {
+                document.getElementById('btn-admin-panel').classList.remove('hidden');
+            } else {
+                document.getElementById('btn-admin-panel').classList.add('hidden');
+            }
+
+            // עדכון הטאבים הזמינים לפי הרשאות
+            document.getElementById('tab-btn-tasks').style.display = currentUser.perm_tasks ? 'block' : 'none';
+            document.getElementById('tab-btn-personnel').style.display = currentUser.perm_personnel ? 'block' : 'none';
+            document.getElementById('tab-btn-war-room').style.display = currentUser.perm_war_room ? 'block' : 'none';
+
+            // פתיחת הטאב הראשון המורשה
+            if (currentUser.perm_tasks) switchMainTab('tasks');
+            else if (currentUser.perm_personnel) switchMainTab('personnel');
+            else if (currentUser.perm_war_room) switchMainTab('war-room');
+
+            loadAllData();
+        }
+
+        async function loadAllData() {
+            try {
+                const [resT, resSub, resP] = await Promise.all([
+                    fetch(`${SUPABASE_BASE_URL}/sec_tasks?select=*`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_BASE_URL}/sec_subtasks?select=*`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_BASE_URL}/sec_personnel?select=*`, { headers: apiHeaders })
+                ]);
+
+                if (resT.ok) allTasks = await resT.ok ? await resT.json() : [];
+                if (resSub.ok) allSubtasks = await resSub.json();
+                if (resP.ok) allPersonnel = await resP.json();
+
+                renderTasks();
+                renderPersonnel();
+                populateAssigneeDropdown();
+            } catch (e) {}
+        }
+
+        function switchMainTab(tab) {
+            currentMainTab = tab;
+
+            const btnT = document.getElementById('tab-btn-tasks');
+            const btnP = document.getElementById('tab-btn-personnel');
+            const btnW = document.getElementById('tab-btn-war-room');
+
+            btnT.className = `py-2.5 rounded-xl transition-all ${tab === 'tasks' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            btnP.className = `py-2.5 rounded-xl transition-all ${tab === 'personnel' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            btnW.className = `py-2.5 rounded-xl transition-all ${tab === 'war-room' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+
+            document.getElementById('view-tasks').classList.toggle('hidden', tab !== 'tasks');
+            document.getElementById('view-personnel').classList.toggle('hidden', tab !== 'personnel');
+            document.getElementById('view-war-room').classList.toggle('hidden', tab !== 'war-room');
+        }
+
+        function switchTaskSubtab(sub) {
+            currentTaskSubtab = sub;
+
+            const btnR = document.getElementById('subtab-btn-routine');
+            const btnP = document.getElementById('subtab-btn-project');
+
+            btnR.className = `px-4 py-1.5 rounded-lg transition-all ${sub === 'שוטף' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
+            btnP.className = `px-4 py-1.5 rounded-lg transition-all ${sub === 'פרויקט' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
+
+            renderTasks();
+        }
+
+        function renderTasks() {
+            const filtered = allTasks.filter(t => t.type === currentTaskSubtab);
+            document.getElementById('tasks-count-label').textContent = `${filtered.length} פעילויות`;
+
+            const list = document.getElementById('tasks-list');
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">אין משימות בקטגוריה זו</div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(t => {
+                const subs = allSubtasks.filter(s => s.task_id === t.id);
+                const formatDate = (d) => {
+                    if (!d) return '';
+                    const parts = d.split('-');
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                };
+
+                return `
+                    <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 space-y-3 ${t.is_completed ? 'opacity-60' : ''}">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="space-y-1">
+                                <h3 class="text-sm font-bold text-white ${t.is_completed ? 'line-through text-slate-400' : ''}">${t.title}</h3>
+                                ${t.content ? `<p class="text-xs text-slate-400 leading-relaxed">${t.content}</p>` : ''}
+                            </div>
+                            
+                            <button onclick="toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-6 h-6 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600'} flex items-center justify-center shrink-0">
+                                ${t.is_completed ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
+                            </button>
+                        </div>
+
+                        <!-- תאריכים ואחראי -->
+                        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-1">
+                            ${t.created_at ? `<span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i> ${formatDate(t.created_at.split('T')[0])}</span>` : ''}
+                            ${t.due_date ? `<span class="flex items-center gap-1 text-amber-500/90 font-semibold"><i data-lucide="clock" class="w-3 h-3"></i> עד ${formatDate(t.due_date)}</span>` : ''}
+                            ${t.assignee_name ? `<span class="flex items-center gap-1 text-slate-300"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${t.assignee_name}</span>` : ''}
+                            ${subs.length > 0 ? `<span class="text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">${subs.length} תת-משימות</span>` : ''}
+                        </div>
+
+                        <!-- תת משימות -->
+                        ${subs.length > 0 ? `
+                            <div class="pt-2 border-t border-slate-800/80 space-y-1.5">
+                                ${subs.map(s => `
+                                    <div class="flex items-center justify-between bg-[#0b1329] px-3 py-1.5 rounded-xl border border-slate-800/60 text-xs">
+                                        <span class="${s.is_completed ? 'line-through text-slate-500' : 'text-slate-300'}">${s.title}</span>
+                                        <div class="flex items-center gap-2">
+                                            <button onclick="toggleSubtaskComplete(${s.id}, ${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
+                                                <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
+                                            </button>
+                                            <button onclick="deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
+                                                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+
+                        <!-- כפתורי פעולות -->
+                        <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
+                            <button onclick="addSubtaskPrompt(${t.id})" class="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> הוסף תת-משימה
+                            </button>
+
+                            <div class="flex items-center gap-2 text-slate-500">
+                                <button onclick="editTask(${t.id})" class="p-1 hover:text-white" title="ערוך">
+                                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                                </button>
+                                <button onclick="deleteTask(${t.id})" class="p-1 hover:text-red-400" title="מחק">
+                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function renderPersonnel() {
+            const filtered = selectedPersonnelGroup === 'הכל' 
+                ? allPersonnel 
+                : allPersonnel.filter(p => p.groups && p.groups.includes(selectedPersonnelGroup));
+
+            const list = document.getElementById('personnel-list');
+            if (filtered.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">אין אנשי צוות בקבוצה זו</div>`;
+                return;
+            }
+
+            list.innerHTML = filtered.map(p => `
+                <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold text-white">${p.full_name}</span>
+                            ${p.role ? `<span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded-md text-[10px] font-semibold">${p.role}</span>` : ''}
+                        </div>
+                        ${p.phone ? `<div class="text-xs text-slate-400 flex items-center gap-1"><i data-lucide="phone" class="w-3 h-3 text-slate-500"></i> ${p.phone}</div>` : ''}
+                        
+                        ${p.groups && p.groups.length > 0 ? `
+                            <div class="flex flex-wrap gap-1 pt-1">
+                                ${p.groups.map(g => `<span class="bg-amber-500/10 border border-amber-500/20 text-amber-500 text-[10px] font-semibold px-2 py-0.5 rounded-md">${g}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+
+                    <div class="flex items-center gap-1.5 text-slate-500">
+                        <button onclick="editPersonnel(${p.id})" class="p-1.5 hover:text-white">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="deletePersonnel(${p.id})" class="p-1.5 hover:text-red-400">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+
+            lucide.createIcons();
+        }
+
+        function filterPersonnel(group) {
+            selectedPersonnelGroup = group;
+            document.querySelectorAll('.personnel-filter-btn').forEach(btn => {
+                if (btn.textContent.trim().replace(/"/g, "'") === group.replace(/"/g, "'")) {
+                    btn.className = "personnel-filter-btn px-3.5 py-2 rounded-xl bg-amber-500 text-white font-bold whitespace-nowrap shadow-sm";
+                } else {
+                    btn.className = "personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800";
+                }
+            });
+            renderPersonnel();
+        }
+
+        function populateAssigneeDropdown() {
+            const select = document.getElementById('task-assignee-select');
+            select.innerHTML = `<option value="">בחר אחראי</option>`;
+            allPersonnel.forEach(p => {
+                select.innerHTML += `<option value="${p.full_name}">${p.full_name}</option>`;
+            });
+        }
+
+        function toggleManualAssignee() {
+            const select = document.getElementById('task-assignee-select');
+            const input = document.getElementById('task-assignee-input');
+            if (select.classList.contains('hidden')) {
+                select.classList.remove('hidden');
+                input.classList.add('hidden');
+            } else {
+                select.classList.add('hidden');
+                input.classList.remove('hidden');
+            }
+        }
+
+        function handleFabClick() {
+            if (currentMainTab === 'tasks') {
+                openModal('modal-task');
+            } else if (currentMainTab === 'personnel') {
+                openModal('modal-personnel');
+            }
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function toggleGroupChip(btn, groupName) {
+            if (selectedGroupsForForm.includes(groupName)) {
+                selectedGroupsForForm = selectedGroupsForForm.filter(g => g !== groupName);
+                btn.className = "chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all";
+            } else {
+                selectedGroupsForForm.push(groupName);
+                btn.className = "chip-btn px-3 py-2 rounded-xl bg-amber-500 border border-amber-500 text-white font-semibold transition-all shadow-sm";
+            }
+        }
+
+        async function saveTask(e) {
+            e.preventDefault();
+            const editId = document.getElementById('task-edit-id').value;
+            const type = document.getElementById('task-type').value;
+            const title = document.getElementById('task-title').value.trim();
+            const content = document.getElementById('task-content').value.trim();
+            const dueDate = document.getElementById('task-due-date').value;
+
+            const select = document.getElementById('task-assignee-select');
+            const input = document.getElementById('task-assignee-input');
+            const assigneeName = select.classList.contains('hidden') ? input.value.trim() : select.value;
+
+            if (!title) return;
+
+            const payload = { type, title, content, due_date: dueDate || null, assignee_name: assigneeName };
+
+            try {
+                if (editId) {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                } else {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
+                }
+                closeModal('modal-task');
+                loadAllData();
+            } catch (err) {}
+        }
+
+        async function savePersonnel(e) {
+            e.preventDefault();
+            const editId = document.getElementById('personnel-edit-id').value;
+            const fullName = document.getElementById('personnel-name').value.trim();
+            const role = document.getElementById('personnel-role').value.trim();
+            const phone = document.getElementById('personnel-phone').value.trim();
+
+            if (!fullName) return;
+
+            const payload = { full_name: fullName, role, phone, groups: selectedGroupsForForm };
+
+            try {
+                if (editId) {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                } else {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_personnel`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
+                }
+                closeModal('modal-personnel');
+                loadAllData();
+            } catch (err) {}
+        }
+
+        async function addSubtaskPrompt(taskId) {
+            const title = prompt("הכנס תיאור לתת-משימה:");
+            if (!title || !title.trim()) return;
+
+            try {
+                await fetch(`${SUPABASE_BASE_URL}/sec_subtasks`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ task_id: taskId, title: title.trim() })
+                });
+                loadAllData();
+            } catch (e) {}
+        }
+
+        async function toggleTaskComplete(id, completed) {
+            await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
+            loadAllData();
+        }
+
+        async function toggleSubtaskComplete(id, completed) {
+            await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
+            loadAllData();
+        }
+
+        async function deleteTask(id) {
+            if (!confirm("למחוק משימה זו?")) return;
+            await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            loadAllData();
+        }
+
+        async function deleteSubtask(id) {
+            await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            loadAllData();
+        }
+
+        async function deletePersonnel(id) {
+            if (!confirm("למחוק איש צוות זה?")) return;
+            await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            loadAllData();
+        }
+
+        // ניהול משתמשים (Admin Panel)
+        async function openAdminModal() {
+            openModal('modal-admin');
+            loadUsers();
+        }
+
+        async function loadUsers() {
+            const res = await fetch(`${SUPABASE_BASE_URL}/sec_users?select=*`, { headers: apiHeaders });
+            if (res.ok) {
+                allUsers = await res.json();
+                renderUsersList();
+            }
+        }
+
+        function renderUsersList() {
+            const list = document.getElementById('users-list');
+            list.innerHTML = allUsers.map(u => `
+                <div class="bg-[#0b1329] p-3 rounded-xl border border-slate-800 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="font-bold text-white">${u.full_name}</span>
+                            <span class="text-slate-400 text-[10px] block">${u.email}</span>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded ${u.role === 'admin' ? 'bg-amber-500/20 text-amber-500' : 'bg-slate-800 text-slate-400'}">${u.role}</span>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px]">
+                        <div class="flex items-center gap-2 text-slate-400">
+                            <span>משימות: ${u.perm_tasks ? '✅' : '❌'}</span>
+                            <span>כח אדם: ${u.perm_personnel ? '✅' : '❌'}</span>
+                            <span>חמ"ל: ${u.perm_war_room ? '✅' : '❌'}</span>
+                        </div>
+
+                        ${u.email !== 'admin@kne.org.il' ? `
+                            <button onclick="deleteUser(${u.id})" class="text-red-400 hover:underline">מחק</button>
+                        ` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function addUser(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('new-user-name').value.trim();
+            const email = document.getElementById('new-user-email').value.trim();
+            const phone = document.getElementById('new-user-phone').value.trim();
+            const password = document.getElementById('new-user-password').value.trim();
+
+            const permTasks = document.getElementById('new-user-p-tasks').checked;
+            const permPersonnel = document.getElementById('new-user-p-personnel').checked;
+            const permWarRoom = document.getElementById('new-user-p-war-room').checked;
+
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_users`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({
+                        full_name: fullName,
+                        email,
+                        phone,
+                        password,
+                        role: 'user',
+                        perm_tasks: permTasks,
+                        perm_personnel: permPersonnel,
+                        perm_war_room: permWarRoom
+                    })
+                });
+                if (res.ok) {
+                    alert("משתמש נוצר בהצלחה!");
+                    loadUsers();
+                }
+            } catch (err) {}
+        }
+
+        async function deleteUser(id) {
+            if (!confirm("למחוק משתמש זה?")) return;
+            await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            loadUsers();
+        }
+    </script>
+</body>
+</html>
