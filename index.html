@@ -64,7 +64,7 @@
                 <div class="w-16 h-16 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-3xl">
                     🛡️
                 </div>
-                <h1 class="text-xl font-bold text-white">ביטחון ניר אליהו</h1>
+                <h1 class="text-xl font-bold text-white">בטחון ניר אליהו</h1>
                 <p class="text-xs text-slate-400">התחברות למערכת ניהול משימות וכח אדם</p>
             </div>
 
@@ -126,7 +126,7 @@
                     🛡️
                 </div>
                 <div>
-                    <h1 class="text-sm font-bold text-white leading-tight">ביטחון ניר אליהו</h1>
+                    <h1 class="text-sm font-bold text-white leading-tight">בטחון ניר אליהו</h1>
                 </div>
             </div>
 
@@ -360,7 +360,7 @@
                         <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="צח'י">צח"י</button>
                         <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="אקדוחנים">אקדוחנים</button>
                         <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="רחפנים">רחפנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'l">חמ"ל</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'ל">חמ"ל</button>
                     </div>
                 </div>
 
@@ -877,6 +877,18 @@
             lucide.createIcons();
         }
 
+        function openCameraApp(url) {
+            if (!url) url = 'provisioncam2://';
+            
+            // ניסיון פתיחה ישיר
+            window.location.href = url;
+            
+            // השהיה קצרה למקרה שהאפליקציה לא מותקנת/לא נפתחת בדפדפן המובנה
+            setTimeout(() => {
+                alert("אם האפליקציה לא נפתחה אוטומטית, ודא שאפליקציית Provision Cam2 מותקנת בנייד.");
+            }, 1500);
+        }
+
         function renderCameras() {
             const list = document.getElementById('cameras-list');
             const label = document.getElementById('cameras-count-label');
@@ -901,10 +913,10 @@
                         </div>
                     </div>
 
-                    <a href="${c.app_url || 'provisioncam2://'}" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
+                    <button onclick="openCameraApp('${c.app_url || 'provisioncam2://'}')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
                         <i data-lucide="external-link" class="w-4 h-4"></i>
                         צפה במצלמה
-                    </a>
+                    </button>
                 </div>
             `).join('');
 
