@@ -65,7 +65,7 @@
         </div>
     </div>
 
-    <!-- Modal 4: החלפת סיסמה בכניסה ראשונה -->
+    <!-- Modal: החלפת סיסמה בכניסה ראשונה -->
     <div id="modal-change-password" class="fixed inset-0 bg-slate-950/90 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-amber-500/40 rounded-3xl max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
             <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-2xl">
@@ -140,23 +140,29 @@
 
         <!-- תוכן טאב 1: משימות -->
         <div id="view-tasks" class="space-y-4">
-            <div class="flex items-center justify-between bg-[#131d38] p-2 border border-slate-800 rounded-2xl">
-                <div class="flex items-center gap-2 px-2 text-xs text-slate-400">
+            <!-- סרגל עליון: כפתור הוספה + כמות + תתי-טאבים -->
+            <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
+                <button onclick="openModal('modal-task')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
+                    <i data-lucide="plus" class="w-4 h-4"></i> הוסף
+                </button>
+
+                <div class="flex items-center gap-2 px-1 text-xs text-slate-400">
                     <i data-lucide="list-checks" class="w-4 h-4 text-amber-500"></i>
                     <span id="tasks-count-label" class="font-bold text-white">0 פעילויות</span>
                 </div>
 
                 <div class="flex bg-[#0b1329] p-1 rounded-xl border border-slate-800 text-xs font-semibold">
-                    <button id="subtab-btn-routine" onclick="switchTaskSubtab('שוטף')" class="px-4 py-1.5 rounded-lg transition-all bg-amber-500 text-white">
+                    <button id="subtab-btn-routine" onclick="switchTaskSubtab('שוטף')" class="px-3.5 py-1.5 rounded-lg transition-all bg-amber-500 text-white">
                         שוטף
                     </button>
-                    <button id="subtab-btn-project" onclick="switchTaskSubtab('פרויקט')" class="px-4 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white">
+                    <button id="subtab-btn-project" onclick="switchTaskSubtab('פרויקט')" class="px-3.5 py-1.5 rounded-lg transition-all text-slate-400 hover:text-white">
                         פרויקט
                     </button>
                 </div>
             </div>
 
-            <div id="tasks-list" class="space-y-3"></div>
+            <!-- רשימת כרטיסי משימות (מקופלים בלחיצה) -->
+            <div id="tasks-list" class="space-y-2.5"></div>
         </div>
 
         <!-- תוכן טאב 2: כוח אדם -->
@@ -237,7 +243,9 @@
                         </button>
                     </div>
                     
-                    <select id="task-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500"></select>
+                    <select id="task-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                        <!-- נטען מטבלת משתמשי האפליקציה -->
+                    </select>
                     
                     <input type="text" id="task-assignee-input" placeholder="שם האחראי" class="hidden w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
                 </div>
@@ -319,7 +327,6 @@
                 ניהול משתמשים והרשאות
             </h3>
 
-            <!-- טופס הוספת משתמש -->
             <form onsubmit="addUser(event)" class="space-y-3 border-b border-slate-800 pb-4 text-xs">
                 <h4 class="font-bold text-amber-500">הוספת משתמש חדש (עם סיסמה ראשונית)</h4>
                 <div class="grid grid-cols-2 gap-2">
@@ -351,7 +358,6 @@
                 </button>
             </form>
 
-            <!-- רשימת משתמשים קיימים -->
             <div class="space-y-2">
                 <h4 class="font-bold text-xs text-slate-400">משתמשים במערכת</h4>
                 <div id="users-list" class="space-y-2 text-xs"></div>
@@ -372,10 +378,12 @@
         };
 
         let currentUser = null;
-        let pendingUser = null; // משתמש שנדרש להחליף סיסמה בכניסה ראשונה
+        let pendingUser = null;
         let currentMainTab = 'tasks';
         let currentTaskSubtab = 'שוטף';
         let selectedPersonnelGroup = 'הכל';
+
+        let expandedTaskIds = new Set(); // ניהול מזהי המשימות הפתוחות/מרוחבות
 
         let allTasks = [];
         let allSubtasks = [];
@@ -488,15 +496,17 @@
 
         async function loadAllData() {
             try {
-                const [resT, resSub, resP] = await Promise.all([
+                const [resT, resSub, resP, resU] = await Promise.all([
                     fetch(`${SUPABASE_BASE_URL}/sec_tasks?select=*`, { headers: apiHeaders }),
                     fetch(`${SUPABASE_BASE_URL}/sec_subtasks?select=*`, { headers: apiHeaders }),
-                    fetch(`${SUPABASE_BASE_URL}/sec_personnel?select=*`, { headers: apiHeaders })
+                    fetch(`${SUPABASE_BASE_URL}/sec_personnel?select=*`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_BASE_URL}/sec_users?select=*`, { headers: apiHeaders })
                 ]);
 
                 if (resT.ok) allTasks = await resT.json();
                 if (resSub.ok) allSubtasks = await resSub.json();
                 if (resP.ok) allPersonnel = await resP.json();
+                if (resU.ok) allUsers = await resU.json();
 
                 renderTasks();
                 renderPersonnel();
@@ -526,9 +536,21 @@
             const btnR = document.getElementById('subtab-btn-routine');
             const btnP = document.getElementById('subtab-btn-project');
 
-            btnR.className = `px-4 py-1.5 rounded-lg transition-all ${sub === 'שוטף' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
-            btnP.className = `px-4 py-1.5 rounded-lg transition-all ${sub === 'פרויקט' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
+            btnR.className = `px-3.5 py-1.5 rounded-lg transition-all ${sub === 'שוטף' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
+            btnP.className = `px-3.5 py-1.5 rounded-lg transition-all ${sub === 'פרויקט' ? 'bg-amber-500 text-white' : 'text-slate-400 hover:text-white'}`;
 
+            renderTasks();
+        }
+
+        function toggleTaskExpand(taskId, e) {
+            if (e.target.closest('button') && !e.target.closest('.accordion-trigger')) {
+                return; // אל תפתח/תקפל אם הלחצן הוא כפתור V, עריכה או מחיקה
+            }
+            if (expandedTaskIds.has(taskId)) {
+                expandedTaskIds.delete(taskId);
+            } else {
+                expandedTaskIds.add(taskId);
+            }
             renderTasks();
         }
 
@@ -544,6 +566,8 @@
 
             list.innerHTML = filtered.map(t => {
                 const subs = allSubtasks.filter(s => s.task_id === t.id);
+                const isExpanded = expandedTaskIds.has(t.id);
+
                 const formatDate = (d) => {
                     if (!d) return '';
                     const parts = d.split('-');
@@ -551,57 +575,72 @@
                 };
 
                 return `
-                    <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 space-y-3 ${t.is_completed ? 'opacity-60' : ''}">
-                        <div class="flex items-start justify-between gap-2">
-                            <div class="space-y-1">
-                                <h3 class="text-sm font-bold text-white ${t.is_completed ? 'line-through text-slate-400' : ''}">${t.title}</h3>
-                                ${t.content ? `<p class="text-xs text-slate-400 leading-relaxed">${t.content}</p>` : ''}
+                    <div class="bg-[#131d38] border border-slate-800/90 rounded-2xl overflow-hidden transition-all ${t.is_completed ? 'opacity-60' : ''}">
+                        
+                        <!-- שורה אחת קומפקטית מקופלת (Accordion Header) -->
+                        <div onclick="toggleTaskExpand(${t.id}, event)" class="p-3.5 px-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <button onclick="toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-5 h-5 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600'} flex items-center justify-center shrink-0">
+                                    ${t.is_completed ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
+                                </button>
+                                
+                                <span class="text-sm font-bold text-white truncate ${t.is_completed ? 'line-through text-slate-400' : ''}">${t.title}</span>
+                                
+                                ${subs.length > 0 ? `<span class="text-[10px] text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg shrink-0">${subs.length} תת-משימות</span>` : ''}
                             </div>
-                            
-                            <button onclick="toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-6 h-6 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600'} flex items-center justify-center shrink-0">
-                                ${t.is_completed ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}
-                            </button>
+
+                            <div class="flex items-center gap-2 shrink-0 pr-2">
+                                ${t.assignee_name ? `<span class="hidden sm:flex items-center gap-1 text-[11px] text-slate-400"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${t.assignee_name}</span>` : ''}
+                                <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-slate-400 accordion-trigger"></i>
+                            </div>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400 pt-1">
-                            ${t.created_at ? `<span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i> ${formatDate(t.created_at.split('T')[0])}</span>` : ''}
-                            ${t.due_date ? `<span class="flex items-center gap-1 text-amber-500/90 font-semibold"><i data-lucide="clock" class="w-3 h-3"></i> עד ${formatDate(t.due_date)}</span>` : ''}
-                            ${t.assignee_name ? `<span class="flex items-center gap-1 text-slate-300"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${t.assignee_name}</span>` : ''}
-                            ${subs.length > 0 ? `<span class="text-amber-500 font-bold bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-lg">${subs.length} תת-משימות</span>` : ''}
-                        </div>
+                        <!-- תוכן מורחב שנפתח בלחיצה -->
+                        ${isExpanded ? `
+                            <div class="p-4 pt-1 border-t border-slate-800/60 bg-[#0d162e] space-y-3">
+                                ${t.content ? `<p class="text-xs text-slate-300 leading-relaxed bg-[#0b1329] p-3 rounded-xl border border-slate-800/80">${t.content}</p>` : ''}
 
-                        ${subs.length > 0 ? `
-                            <div class="pt-2 border-t border-slate-800/80 space-y-1.5">
-                                ${subs.map(s => `
-                                    <div class="flex items-center justify-between bg-[#0b1329] px-3 py-1.5 rounded-xl border border-slate-800/60 text-xs">
-                                        <span class="${s.is_completed ? 'line-through text-slate-500' : 'text-slate-300'}">${s.title}</span>
-                                        <div class="flex items-center gap-2">
-                                            <button onclick="toggleSubtaskComplete(${s.id}, ${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
-                                                <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
-                                            </button>
-                                            <button onclick="deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
-                                                <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                                            </button>
-                                        </div>
+                                <div class="flex flex-wrap items-center gap-3 text-[11px] text-slate-400">
+                                    ${t.created_at ? `<span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i> יצירה: ${formatDate(t.created_at.split('T')[0])}</span>` : ''}
+                                    ${t.due_date ? `<span class="flex items-center gap-1 text-amber-500/90 font-semibold"><i data-lucide="clock" class="w-3 h-3"></i> יעד: ${formatDate(t.due_date)}</span>` : ''}
+                                    ${t.assignee_name ? `<span class="flex items-center gap-1 text-slate-300"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> אחראי: ${t.assignee_name}</span>` : ''}
+                                </div>
+
+                                ${subs.length > 0 ? `
+                                    <div class="space-y-1.5 pt-1">
+                                        <span class="text-[11px] font-semibold text-slate-400 block">תת-משימות:</span>
+                                        ${subs.map(s => `
+                                            <div class="flex items-center justify-between bg-[#0b1329] px-3 py-2 rounded-xl border border-slate-800/60 text-xs">
+                                                <span class="${s.is_completed ? 'line-through text-slate-500' : 'text-slate-300'}">${s.title}</span>
+                                                <div class="flex items-center gap-2">
+                                                    <button onclick="toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
+                                                        <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
+                                                    </button>
+                                                    <button onclick="deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
+                                                        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        `).join('')}
                                     </div>
-                                `).join('')}
+                                ` : ''}
+
+                                <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
+                                    <button onclick="addSubtaskPrompt(${t.id})" class="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> הוסף תת-משימה
+                                    </button>
+
+                                    <div class="flex items-center gap-2 text-slate-500">
+                                        <button onclick="editTask(${t.id})" class="p-1 hover:text-white" title="ערוך">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </button>
+                                        <button onclick="deleteTask(${t.id})" class="p-1 hover:text-red-400" title="מחק">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         ` : ''}
-
-                        <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
-                            <button onclick="addSubtaskPrompt(${t.id})" class="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1">
-                                <i data-lucide="plus" class="w-3.5 h-3.5"></i> הוסף תת-משימה
-                            </button>
-
-                            <div class="flex items-center gap-2 text-slate-500">
-                                <button onclick="editTask(${t.id})" class="p-1 hover:text-white" title="ערוך">
-                                    <i data-lucide="pencil" class="w-4 h-4"></i>
-                                </button>
-                                <button onclick="deleteTask(${t.id})" class="p-1 hover:text-red-400" title="מחק">
-                                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                </button>
-                            </div>
-                        </div>
                     </div>
                 `;
             }).join('');
@@ -662,11 +701,14 @@
             renderPersonnel();
         }
 
+        // טעינת רשימת האחראים מטבלת משתמשי האפליקציה (sec_users)
         function populateAssigneeDropdown() {
             const select = document.getElementById('task-assignee-select');
             select.innerHTML = `<option value="">בחר אחראי</option>`;
-            allPersonnel.forEach(p => {
-                select.innerHTML += `<option value="${p.full_name}">${p.full_name}</option>`;
+            
+            // שילוב שמות מטבלת המשתמשים
+            allUsers.forEach(u => {
+                select.innerHTML += `<option value="${u.full_name}">${u.full_name}</option>`;
             });
         }
 
@@ -735,6 +777,27 @@
             } catch (err) {}
         }
 
+        function editTask(id) {
+            const t = allTasks.find(item => item.id === id);
+            if (!t) return;
+
+            document.getElementById('task-edit-id').value = t.id;
+            document.getElementById('task-type').value = t.type;
+            document.getElementById('task-title').value = t.title;
+            document.getElementById('task-content').value = t.content || '';
+            document.getElementById('task-due-date').value = t.due_date || '';
+
+            const select = document.getElementById('task-assignee-select');
+            const input = document.getElementById('task-assignee-input');
+
+            select.classList.remove('hidden');
+            input.classList.add('hidden');
+            select.value = t.assignee_name || '';
+
+            document.getElementById('modal-task-title').textContent = 'עריכת משימה';
+            openModal('modal-task');
+        }
+
         async function savePersonnel(e) {
             e.preventDefault();
             const editId = document.getElementById('personnel-edit-id').value;
@@ -798,7 +861,6 @@
             loadAllData();
         }
 
-        // ניהול משתמשים (Admin Panel)
         async function openAdminModal() {
             openModal('modal-admin');
             loadUsers();
@@ -809,6 +871,7 @@
             if (res.ok) {
                 allUsers = await res.json();
                 renderUsersList();
+                populateAssigneeDropdown();
             }
         }
 
