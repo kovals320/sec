@@ -889,8 +889,8 @@
             }
 
             list.innerHTML = allCameras.map(c => {
-                // קישור חיפוש בחנות Play Store שפותח ישירות את עמוד האפליקציה המותקנת
-                const targetUrl = c.app_url || 'https://play.google.com/store/search?q=Provision%20CAM%202&c=apps';
+                // שימוש ב-Market Intent ישיר של אנדרואיד לפתיחת אפליקציית Google Play Store המותקנת
+                const targetIntent = c.app_url || 'intent://details?id=com.provisionisr.provisioncam2#Intent;scheme=market;package=com.android.vending;end';
 
                 return `
                     <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
@@ -905,7 +905,7 @@
                             </div>
                         </div>
 
-                        <a href="${targetUrl}" target="_blank" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
+                        <a href="${targetIntent}" target="_blank" rel="noopener noreferrer" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
                             <i data-lucide="external-link" class="w-4 h-4"></i>
                             צפה במצלמה
                         </a>
