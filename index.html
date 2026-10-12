@@ -889,7 +889,8 @@
             }
 
             list.innerHTML = allCameras.map(c => {
-                const targetIntent = c.app_url || 'intent:#Intent;launchFlags=0x10000000;component=com.provision.provisioncam2/com.provision.provisioncam2.ActivitySplash;end';
+                // שימוש ב-Intent נקי לפי Package Name - המנגנון הסטנדרטי של אנדרואיד לפתיחת אפליקציות
+                const targetIntent = c.app_url || 'intent://#Intent;scheme=com.provision.provisioncam2;package=com.provision.provisioncam2;end';
 
                 return `
                     <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
