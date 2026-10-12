@@ -145,8 +145,17 @@
             </button>
         </div>
 
+        <!-- הודעה למשתמש ללא הרשאות -->
+        <div id="view-no-permission" class="hidden bg-[#131d38] border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+            <div class="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-center justify-center mx-auto text-red-400 text-3xl">
+                🔒
+            </div>
+            <h2 class="text-base font-bold text-white">אין הרשאות צפייה</h2>
+            <p class="text-xs text-slate-400">לא הוגדרו עבורך הרשאות צפייה בטאבים במערכת.<br>נא לפנות למנהל המערכת לצורך עדכון ההרשאות.</p>
+        </div>
+
         <!-- תוכן טאב 1: משימות -->
-        <div id="view-tasks" class="space-y-4">
+        <div id="view-tasks" class="hidden space-y-4">
             <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
                 <button id="btn-add-task" onclick="openModal('modal-task')" class="hidden bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
                     <i data-lucide="plus" class="w-4 h-4"></i> הוסף
@@ -326,7 +335,7 @@
         </div>
     </div>
 
-    <!-- Modal 3: ניהול משתמשים והרשאות (Super Admin בלבד) -->
+    <!-- Modal 3: ניהול משתמשים והרשאות -->
     <div id="modal-admin" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative max-h-[90vh] overflow-y-auto">
             <button onclick="closeModal('modal-admin')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -338,7 +347,6 @@
                 ניהול משתמשים והרשאות טאבים
             </h3>
 
-            <!-- טופס הוספת משתמש חדש כולל שדה תפקיד Role -->
             <form onsubmit="addUser(event)" class="space-y-3 border-b border-slate-800 pb-4 text-xs">
                 <h4 class="font-bold text-amber-500">הוספת משתמש חדש</h4>
                 <div class="grid grid-cols-2 gap-2">
@@ -436,8 +444,8 @@
             closeModal('modal-personnel');
             closeModal('modal-admin');
             closeModal('modal-logs');
-            if (currentUser && currentUser.perm_tasks) {
-                switchMainTab('tasks');
+            if (currentUser) {
+                initApp();
             }
         }
 
@@ -552,19 +560,36 @@
                 }
             });
 
-            const btnT = document.getElementById('tab-btn-tasks');
-            const btnP = document.getElementById('tab-btn-personnel');
-            const btnW = document.getElementById('tab-btn-war-room');
+            const hasAnyPermission = currentUser.perm_tasks || currentUser.perm_personnel || currentUser.perm_war_room;
 
-            if (btnT) btnT.style.display = currentUser.perm_tasks ? 'block' : 'none';
-            if (btnP) btnP.style.display = currentUser.perm_personnel ? 'block' : 'none';
-            if (btnW) btnW.style.display = currentUser.perm_war_room ? 'block' : 'none';
+            const navTabs = document.getElementById('main-tabs-nav');
+            const noPermView = document.getElementById('view-no-permission');
 
-            if (currentUser.perm_tasks) switchMainTab('tasks');
-            else if (currentUser.perm_personnel) switchMainTab('personnel');
-            else if (currentUser.perm_war_room) switchMainTab('war-room');
+            if (!hasAnyPermission) {
+                if (navTabs) navTabs.classList.add('hidden');
+                if (noPermView) noPermView.classList.remove('hidden');
 
-            loadAllData();
+                document.getElementById('view-tasks').classList.add('hidden');
+                document.getElementById('view-personnel').classList.add('hidden');
+                document.getElementById('view-war-room').classList.add('hidden');
+            } else {
+                if (navTabs) navTabs.classList.remove('hidden');
+                if (noPermView) noPermView.classList.add('hidden');
+
+                const btnT = document.getElementById('tab-btn-tasks');
+                const btnP = document.getElementById('tab-btn-personnel');
+                const btnW = document.getElementById('tab-btn-war-room');
+
+                if (btnT) btnT.style.display = currentUser.perm_tasks ? 'block' : 'none';
+                if (btnP) btnP.style.display = currentUser.perm_personnel ? 'block' : 'none';
+                if (btnW) btnW.style.display = currentUser.perm_war_room ? 'block' : 'none';
+
+                if (currentUser.perm_tasks) switchMainTab('tasks');
+                else if (currentUser.perm_personnel) switchMainTab('personnel');
+                else if (currentUser.perm_war_room) switchMainTab('war-room');
+
+                loadAllData();
+            }
         }
 
         async function loadAllData() {
@@ -594,9 +619,9 @@
             const btnP = document.getElementById('tab-btn-personnel');
             const btnW = document.getElementById('tab-btn-war-room');
 
-            btnT.className = `py-2.5 rounded-xl transition-all ${tab === 'tasks' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
-            btnP.className = `py-2.5 rounded-xl transition-all ${tab === 'personnel' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
-            btnW.className = `py-2.5 rounded-xl transition-all ${tab === 'war-room' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            if (btnT) btnT.className = `py-2.5 rounded-xl transition-all ${tab === 'tasks' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            if (btnP) btnP.className = `py-2.5 rounded-xl transition-all ${tab === 'personnel' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
+            if (btnW) btnW.className = `py-2.5 rounded-xl transition-all ${tab === 'war-room' ? 'bg-amber-500 text-white shadow-md' : 'text-slate-400 hover:text-white'}`;
 
             document.getElementById('view-tasks').classList.toggle('hidden', tab !== 'tasks');
             document.getElementById('view-personnel').classList.toggle('hidden', tab !== 'personnel');
@@ -1076,7 +1101,6 @@
 
                 if (res.ok) {
                     logAction('עדכון', `עדכון הרשאת ${permField} למשתמש #${userId} ל-${isChecked}`);
-                    // עדכון מקומי של המשתמש בזיכרון
                     const u = allUsers.find(item => item.id === userId);
                     if (u) u[permField] = isChecked;
                 }
@@ -1093,7 +1117,7 @@
             const email = document.getElementById('new-user-email').value.trim();
             const phone = document.getElementById('new-user-phone').value.trim();
             const password = document.getElementById('new-user-password').value.trim();
-            const role = document.getElementById('new-user-role').value; // user / admin
+            const role = document.getElementById('new-user-role').value;
 
             const permTasks = document.getElementById('new-user-p-tasks').checked;
             const permPersonnel = document.getElementById('new-user-p-personnel').checked;
