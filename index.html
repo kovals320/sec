@@ -877,11 +877,6 @@
             lucide.createIcons();
         }
 
-        function openCameraApp(appUrl) {
-            const target = appUrl || 'intent://#Intent;scheme=provisioncam2;package=com.provision.provisioncam2;end;';
-            window.location.href = target;
-        }
-
         function renderCameras() {
             const list = document.getElementById('cameras-list');
             const label = document.getElementById('cameras-count-label');
@@ -894,7 +889,7 @@
             }
 
             list.innerHTML = allCameras.map(c => {
-                const targetUrl = c.app_url || '';
+                const targetIntent = c.app_url || 'intent:#Intent;launchFlags=0x10000000;component=com.provision.provisioncam2/com.provision.provisioncam2.ActivitySplash;end';
 
                 return `
                     <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-4 flex items-center justify-between gap-3">
@@ -909,10 +904,10 @@
                             </div>
                         </div>
 
-                        <button onclick="openCameraApp('${targetUrl}')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
+                        <a href="${targetIntent}" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all shrink-0">
                             <i data-lucide="external-link" class="w-4 h-4"></i>
                             צפה במצלמה
-                        </button>
+                        </a>
                     </div>
                 `;
             }).join('');
