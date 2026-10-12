@@ -5,11 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ביטחון ניר אליהו</title>
 
-    <!-- PWA -->
+    <!-- PWA Settings & Mobile Meta -->
     <link rel="manifest" href="/manifest.json">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#0b1329">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="בטחון">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/924/924908.png">
 
     <!-- Tailwind CSS & Lucide Icons -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -35,6 +38,24 @@
     </style>
 </head>
 <body class="min-h-screen pb-20 select-none">
+
+    <!-- PWA Install Banner -->
+    <div id="pwa-install-banner" class="hidden max-w-xl mx-auto px-4 pt-4">
+        <div class="bg-[#131d38] text-white p-3.5 rounded-2xl shadow-lg border border-amber-500/30 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-lg">
+                    🛡️
+                </div>
+                <div>
+                    <h4 class="font-bold text-xs text-white">התקן את אפליקציית בטחון</h4>
+                    <p class="text-[11px] text-slate-400">גישה מהירה ממסך הבית בנייד</p>
+                </div>
+            </div>
+            <button id="pwa-install-btn" class="bg-amber-500 hover:bg-amber-600 text-white px-3.5 py-1.5 rounded-xl font-bold text-xs shadow-md transition-all">
+                התקן
+            </button>
+        </div>
+    </div>
 
     <!-- מסך התחברות (Login) -->
     <div id="login-screen" class="fixed inset-0 z-50 bg-[#0b1329] flex items-center justify-center p-4">
@@ -407,7 +428,7 @@
         </div>
     </div>
 
-    <!-- Script Application Logic -->
+    <!-- Script Application Logic & Service Worker -->
     <script>
         const SUPABASE_BASE_URL = 'https://pjujibzoscawmstarerz.supabase.co/rest/v1';
         const SUPABASE_KEY = 'sb_publishable_5mK3Md5VCpXjHTSgVv68GQ_8kmPbg83';
@@ -433,6 +454,36 @@
         let allUsers = [];
 
         let selectedGroupsForForm = [];
+
+        // PWA Service Worker & Install Logic
+        let deferredPrompt;
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('SEC SW Registered!', reg))
+                    .catch(err => console.error('SEC SW Registration Failed!', err));
+            });
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            const installBanner = document.getElementById('pwa-install-banner');
+            const installBtn = document.getElementById('pwa-install-btn');
+            
+            if (installBanner && installBtn) {
+                installBanner.classList.remove('hidden');
+                installBtn.addEventListener('click', () => {
+                    installBanner.classList.add('hidden');
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        deferredPrompt = null;
+                    });
+                });
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             lucide.createIcons();
@@ -591,7 +642,6 @@
                 loadAllData();
             }
 
-            // רינדור מחודש של אייקוני lucide
             setTimeout(() => { lucide.createIcons(); }, 50);
         }
 
@@ -1144,7 +1194,7 @@
                     })
                 });
                 if (res.ok) {
-                    logAction('יצירה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
+                    logAction('יציאה', `הוספת משתמש חדש: ${fullName} (${email}) בתפקיד ${role}`);
                     alert("משתמש נוצר בהצלחה!");
                     document.getElementById('new-user-name').value = '';
                     document.getElementById('new-user-email').value = '';
@@ -1173,7 +1223,6 @@
             container.innerHTML = `<div class="text-center py-6 text-slate-500">טוען לוגים...</div>`;
 
             try {
-                // טעינת הלוגים מטבלת sec_log
                 const res = await fetch(`${SUPABASE_BASE_URL}/sec_log?select=*&order=created_at.desc&limit=100`, { headers: apiHeaders });
                 if (res.ok) {
                     const logs = await res.json();
@@ -1182,7 +1231,6 @@
                         return;
                     }
 
-                    // תצוגת שורות טקסט קריאה
                     container.innerHTML = logs.map(l => {
                         const d = new Date(l.created_at);
                         const dateStr = d.toLocaleDateString('he-IL');
