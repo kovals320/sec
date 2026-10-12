@@ -100,7 +100,7 @@
 
         <!-- Header -->
         <div class="flex items-center justify-between bg-[#131d38] border border-slate-800/80 rounded-3xl p-3.5 px-4 shadow-sm">
-            <div class="flex items-center gap-2">
+            <div onclick="goHome()" class="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
                 <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 text-lg">
                     🛡️
                 </div>
@@ -115,6 +115,13 @@
                     <span id="user-display-name">--</span>
                 </div>
                 
+                <!-- כפתור לוג מערכת (רק למנהל) -->
+                <button id="btn-system-log" onclick="openLogsModal()" class="hidden px-2.5 py-1.5 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors" title="לוג מערכת">
+                    <i data-lucide="scroll" class="w-3.5 h-3.5 text-amber-500"></i>
+                    <span class="hidden sm:inline">לוג מערכת</span>
+                </button>
+
+                <!-- כפתור ניהול משתמשים (רק למנהל) -->
                 <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
                     <i data-lucide="shield-check" class="w-4 h-4"></i>
                 </button>
@@ -140,7 +147,6 @@
 
         <!-- תוכן טאב 1: משימות -->
         <div id="view-tasks" class="space-y-4">
-            <!-- סרגל עליון: כפתור הוספה + כמות + תתי-טאבים -->
             <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
                 <button onclick="openModal('modal-task')" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
                     <i data-lucide="plus" class="w-4 h-4"></i> הוסף
@@ -161,7 +167,6 @@
                 </div>
             </div>
 
-            <!-- רשימת כרטיסי משימות (מקופלים בלחיצה) -->
             <div id="tasks-list" class="space-y-2.5"></div>
         </div>
 
@@ -243,9 +248,7 @@
                         </button>
                     </div>
                     
-                    <select id="task-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
-                        <!-- נטען מטבלת משתמשי האפליקציה -->
-                    </select>
+                    <select id="task-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500"></select>
                     
                     <input type="text" id="task-assignee-input" placeholder="שם האחראי" class="hidden w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
                 </div>
@@ -365,6 +368,24 @@
         </div>
     </div>
 
+    <!-- Modal 5: לוג מערכת (רק למנהלים) -->
+    <div id="modal-logs" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 relative max-h-[85vh] overflow-y-auto">
+            <button onclick="closeModal('modal-logs')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="text-base font-bold text-white pr-2 flex items-center gap-2">
+                <i data-lucide="scroll" class="w-5 h-5 text-amber-500"></i>
+                לוג מערכת - תיעוד פעולות
+            </h3>
+
+            <div id="logs-container" class="space-y-2 text-xs">
+                <div class="text-center py-6 text-slate-500">טוען לוגים...</div>
+            </div>
+        </div>
+    </div>
+
     <!-- Script Application Logic -->
     <script>
         const SUPABASE_BASE_URL = 'https://pjujibzoscawmstarerz.supabase.co/rest/v1';
@@ -383,7 +404,7 @@
         let currentTaskSubtab = 'שוטף';
         let selectedPersonnelGroup = 'הכל';
 
-        let expandedTaskIds = new Set(); // ניהול מזהי המשימות הפתוחות/מרוחבות
+        let expandedTaskIds = new Set();
 
         let allTasks = [];
         let allSubtasks = [];
@@ -396,6 +417,33 @@
             lucide.createIcons();
             checkSavedSession();
         });
+
+        // חזרה למסך הראשי (טאב משימות) וסגירת מודאלים
+        function goHome() {
+            closeModal('modal-task');
+            closeModal('modal-personnel');
+            closeModal('modal-admin');
+            closeModal('modal-logs');
+            if (currentUser && currentUser.perm_tasks) {
+                switchMainTab('tasks');
+            }
+        }
+
+        async function logAction(actionType, details) {
+            if (!currentUser) return;
+            try {
+                await fetch(`${SUPABASE_BASE_URL}/sec_logs`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({
+                        user_name: currentUser.full_name,
+                        user_email: currentUser.email,
+                        action_type: actionType,
+                        details: details
+                    })
+                });
+            } catch (e) {}
+        }
 
         function checkSavedSession() {
             const saved = localStorage.getItem('sec_user');
@@ -422,6 +470,7 @@
                     } else {
                         currentUser = u;
                         localStorage.setItem('sec_user', JSON.stringify(currentUser));
+                        logAction('כניסה', 'התחברות למערכת');
                         initApp();
                     }
                 } else {
@@ -455,6 +504,7 @@
                     currentUser = { ...pendingUser, password: p1, must_change_password: false };
                     pendingUser = null;
                     localStorage.setItem('sec_user', JSON.stringify(currentUser));
+                    logAction('עדכון', 'החלפת סיסמה ראשונית בכניסה למערכת');
                     initApp();
                 }
             } catch (err) {
@@ -463,6 +513,9 @@
         }
 
         function handleLogout() {
+            if (currentUser) {
+                logAction('יציאה', 'התנתקות מהמערכת');
+            }
             localStorage.removeItem('sec_user');
             currentUser = null;
             document.getElementById('login-screen').classList.remove('hidden');
@@ -479,8 +532,10 @@
 
             if (currentUser.role === 'admin') {
                 document.getElementById('btn-admin-panel').classList.remove('hidden');
+                document.getElementById('btn-system-log').classList.remove('hidden');
             } else {
                 document.getElementById('btn-admin-panel').classList.add('hidden');
+                document.getElementById('btn-system-log').classList.add('hidden');
             }
 
             document.getElementById('tab-btn-tasks').style.display = currentUser.perm_tasks ? 'block' : 'none';
@@ -544,7 +599,7 @@
 
         function toggleTaskExpand(taskId, e) {
             if (e.target.closest('button') && !e.target.closest('.accordion-trigger')) {
-                return; // אל תפתח/תקפל אם הלחצן הוא כפתור V, עריכה או מחיקה
+                return;
             }
             if (expandedTaskIds.has(taskId)) {
                 expandedTaskIds.delete(taskId);
@@ -576,8 +631,6 @@
 
                 return `
                     <div class="bg-[#131d38] border border-slate-800/90 rounded-2xl overflow-hidden transition-all ${t.is_completed ? 'opacity-60' : ''}">
-                        
-                        <!-- שורה אחת קומפקטית מקופלת (Accordion Header) -->
                         <div onclick="toggleTaskExpand(${t.id}, event)" class="p-3.5 px-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition-colors">
                             <div class="flex items-center gap-3 min-w-0">
                                 <button onclick="toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-5 h-5 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600'} flex items-center justify-center shrink-0">
@@ -595,7 +648,6 @@
                             </div>
                         </div>
 
-                        <!-- תוכן מורחב שנפתח בלחיצה -->
                         ${isExpanded ? `
                             <div class="p-4 pt-1 border-t border-slate-800/60 bg-[#0d162e] space-y-3">
                                 ${t.content ? `<p class="text-xs text-slate-300 leading-relaxed bg-[#0b1329] p-3 rounded-xl border border-slate-800/80">${t.content}</p>` : ''}
@@ -701,12 +753,9 @@
             renderPersonnel();
         }
 
-        // טעינת רשימת האחראים מטבלת משתמשי האפליקציה (sec_users)
         function populateAssigneeDropdown() {
             const select = document.getElementById('task-assignee-select');
             select.innerHTML = `<option value="">בחר אחראי</option>`;
-            
-            // שילוב שמות מטבלת המשתמשים
             allUsers.forEach(u => {
                 select.innerHTML += `<option value="${u.full_name}">${u.full_name}</option>`;
             });
@@ -769,8 +818,10 @@
             try {
                 if (editId) {
                     await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                    logAction('עדכון', `עדכון משימה: "${title}"`);
                 } else {
                     await fetch(`${SUPABASE_BASE_URL}/sec_tasks`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
+                    logAction('יצירה', `יצירת משימה חדשה: "${title}" (${type})`);
                 }
                 closeModal('modal-task');
                 loadAllData();
@@ -812,8 +863,10 @@
             try {
                 if (editId) {
                     await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                    logAction('עדכון', `עדכון איש צוות: ${fullName}`);
                 } else {
                     await fetch(`${SUPABASE_BASE_URL}/sec_personnel`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
+                    logAction('יצירה', `הוספת איש צוות חדש: ${fullName}`);
                 }
                 closeModal('modal-personnel');
                 loadAllData();
@@ -830,34 +883,43 @@
                     headers: apiHeaders,
                     body: JSON.stringify({ task_id: taskId, title: title.trim() })
                 });
+                logAction('יצירה', `הוספת תת-משימה: "${title.trim()}"`);
                 loadAllData();
             } catch (e) {}
         }
 
         async function toggleTaskComplete(id, completed) {
+            const t = allTasks.find(item => item.id === id);
             await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
+            logAction('עדכון', `סימון משימה "${t?.title || id}" כ${completed ? 'הושלמה' : 'פעילה'}`);
             loadAllData();
         }
 
         async function toggleSubtaskComplete(id, completed) {
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
+            logAction('עדכון', `סימון תת-משימה כ${completed ? 'הושלמה' : 'פעילה'}`);
             loadAllData();
         }
 
         async function deleteTask(id) {
+            const t = allTasks.find(item => item.id === id);
             if (!confirm("למחוק משימה זו?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            logAction('מחיקה', `מחיקת משימה: "${t?.title || id}"`);
             loadAllData();
         }
 
         async function deleteSubtask(id) {
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            logAction('מחיקה', `מחיקת תת-משימה`);
             loadAllData();
         }
 
         async function deletePersonnel(id) {
+            const p = allPersonnel.find(item => item.id === id);
             if (!confirm("למחוק איש צוות זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            logAction('מחיקה', `מחיקת איש צוות: ${p?.full_name || id}`);
             loadAllData();
         }
 
@@ -930,16 +992,64 @@
                     })
                 });
                 if (res.ok) {
-                    alert("משתמש נוצר בהצלחה! הסיסמה הראשונית נקבעה, והמשתמש יידרש להחליף אותה בכניסתו הראשונה.");
+                    logAction('יצירה', `הוספת משתמש מערכת חדש: ${fullName} (${email})`);
+                    alert("משתמש נוצר בהצלחה!");
                     loadUsers();
                 }
             } catch (err) {}
         }
 
         async function deleteUser(id) {
+            const u = allUsers.find(item => item.id === id);
             if (!confirm("למחוק משתמש זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
+            logAction('מחיקה', `מחיקת משתמש מערכת: ${u?.full_name || id}`);
             loadUsers();
+        }
+
+        async function openLogsModal() {
+            openModal('modal-logs');
+            const container = document.getElementById('logs-container');
+            container.innerHTML = `<div class="text-center py-6 text-slate-500">טוען לוגים...</div>`;
+
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_logs?select=*&order=created_at.desc&limit=100`, { headers: apiHeaders });
+                if (res.ok) {
+                    const logs = await res.json();
+                    if (logs.length === 0) {
+                        container.innerHTML = `<div class="text-center py-6 text-slate-500">אין לוגים רשומים עדיין</div>`;
+                        return;
+                    }
+
+                    container.innerHTML = logs.map(l => {
+                        const d = new Date(l.created_at);
+                        const dateStr = d.toLocaleDateString('he-IL');
+                        const timeStr = d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+                        let typeColor = 'bg-slate-800 text-slate-300';
+                        if (l.action_type === 'כניסה') typeColor = 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30';
+                        else if (l.action_type === 'יציאה') typeColor = 'bg-slate-700 text-slate-400';
+                        else if (l.action_type === 'יצירה') typeColor = 'bg-amber-500/20 text-amber-400 border border-amber-500/30';
+                        else if (l.action_type === 'מחיקה') typeColor = 'bg-red-500/20 text-red-400 border border-red-500/30';
+                        else if (l.action_type === 'עדכון') typeColor = 'bg-blue-500/20 text-blue-400 border border-blue-500/30';
+
+                        return `
+                            <div class="bg-[#0b1329] p-3 rounded-2xl border border-slate-800/80 space-y-1">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-bold text-white">${l.user_name}</span>
+                                        <span class="text-[10px] font-semibold px-2 py-0.5 rounded-lg ${typeColor}">${l.action_type}</span>
+                                    </div>
+                                    <span class="text-[10px] text-slate-500">${dateStr} ${timeStr}</span>
+                                </div>
+                                <p class="text-slate-300 leading-normal">${l.details}</p>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            } catch (e) {
+                container.innerHTML = `<div class="text-center py-6 text-red-400">שגיאה שטעינת הלוגים</div>`;
+            }
         }
     </script>
 </body>
