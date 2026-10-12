@@ -172,6 +172,14 @@
 
         <!-- תוכן טאב 2: כוח אדם -->
         <div id="view-personnel" class="hidden space-y-4">
+            <!-- סרגל עליון בטאב כוח אדם: כפתור הוספת איש צוות (רק לאדמין) -->
+            <div class="flex items-center justify-between bg-[#131d38] p-2.5 border border-slate-800 rounded-2xl">
+                <button id="btn-add-personnel" onclick="openAddPersonnelModal()" class="hidden bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all">
+                    <i data-lucide="user-plus" class="w-4 h-4"></i> הוספת איש צוות
+                </button>
+                <div id="personnel-count-label" class="text-xs text-slate-400 font-bold px-2"></div>
+            </div>
+
             <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar">
                 <button onclick="filterPersonnel('הכל')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-amber-500 text-white font-bold whitespace-nowrap shadow-sm">הכל</button>
                 <button onclick="filterPersonnel('כיתת כוננות')" class="personnel-filter-btn px-3.5 py-2 rounded-xl bg-[#131d38] border border-slate-800 text-slate-300 font-medium whitespace-nowrap hover:bg-slate-800">כיתת כוננות</button>
@@ -272,7 +280,7 @@
                 <i data-lucide="x" class="w-5 h-5"></i>
             </button>
 
-            <h3 class="text-base font-bold text-white pr-2">הוספת איש צוות</h3>
+            <h3 id="modal-personnel-title" class="text-base font-bold text-white pr-2">הוספת איש צוות</h3>
 
             <form onsubmit="savePersonnel(event)" class="space-y-3.5 text-xs">
                 <input type="hidden" id="personnel-edit-id" value="">
@@ -293,16 +301,17 @@
                     <label class="block font-semibold text-slate-400 mb-1">טלפון</label>
                     <input type="tel" id="personnel-phone" placeholder="ניתן למלא מאוחר יותר"
                         class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                    <p class="text-[10px] text-slate-500 mt-1">ניתן להשאיר ריק ולמלא מאוחר יותר.</p>
                 </div>
 
                 <div>
                     <label class="block font-semibold text-slate-400 mb-2">קבוצות</label>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="toggleGroupChip(this, 'כיתת כוננות')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">כיתת כוננות</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">צח"י</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">אקדוחנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">רחפנים</button>
-                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all">חמ"ל</button>
+                    <div class="flex flex-wrap gap-2" id="group-chips-container">
+                        <button type="button" onclick="toggleGroupChip(this, 'כיתת כוננות')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="כיתת כוננות">כיתת כוננות</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'צח\'י')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="צח'י">צח"י</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'אקדוחנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="אקדוחנים">אקדוחנים</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'רחפנים')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="רחפנים">רחפנים</button>
+                        <button type="button" onclick="toggleGroupChip(this, 'חמ\'ל')" class="chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all" data-group="חמ'ל">חמ"ל</button>
                     </div>
                 </div>
 
@@ -418,7 +427,6 @@
             checkSavedSession();
         });
 
-        // חזרה למסך הראשי (טאב משימות) וסגירת מודאלים
         function goHome() {
             closeModal('modal-task');
             closeModal('modal-personnel');
@@ -533,9 +541,11 @@
             if (currentUser.role === 'admin') {
                 document.getElementById('btn-admin-panel').classList.remove('hidden');
                 document.getElementById('btn-system-log').classList.remove('hidden');
+                document.getElementById('btn-add-personnel').classList.remove('hidden');
             } else {
                 document.getElementById('btn-admin-panel').classList.add('hidden');
                 document.getElementById('btn-system-log').classList.add('hidden');
+                document.getElementById('btn-add-personnel').classList.add('hidden');
             }
 
             document.getElementById('tab-btn-tasks').style.display = currentUser.perm_tasks ? 'block' : 'none';
@@ -705,11 +715,15 @@
                 ? allPersonnel 
                 : allPersonnel.filter(p => p.groups && p.groups.includes(selectedPersonnelGroup));
 
+            document.getElementById('personnel-count-label').textContent = `${filtered.length} אנשי צוות`;
+
             const list = document.getElementById('personnel-list');
             if (filtered.length === 0) {
                 list.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">אין אנשי צוות בקבוצה זו</div>`;
                 return;
             }
+
+            const isAdmin = currentUser && currentUser.role === 'admin';
 
             list.innerHTML = filtered.map(p => `
                 <div class="bg-[#131d38] border border-slate-800 rounded-2xl p-3.5 flex items-center justify-between gap-3">
@@ -727,14 +741,16 @@
                         ` : ''}
                     </div>
 
-                    <div class="flex items-center gap-1.5 text-slate-500">
-                        <button onclick="editPersonnel(${p.id})" class="p-1.5 hover:text-white">
-                            <i data-lucide="pencil" class="w-4 h-4"></i>
-                        </button>
-                        <button onclick="deletePersonnel(${p.id})" class="p-1.5 hover:text-red-400">
-                            <i data-lucide="trash-2" class="w-4 h-4"></i>
-                        </button>
-                    </div>
+                    ${isAdmin ? `
+                        <div class="flex items-center gap-1.5 text-slate-500">
+                            <button onclick="editPersonnel(${p.id})" class="p-1.5 hover:text-white">
+                                <i data-lucide="pencil" class="w-4 h-4"></i>
+                            </button>
+                            <button onclick="deletePersonnel(${p.id})" class="p-1.5 hover:text-red-400">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    ` : ''}
                 </div>
             `).join('');
 
@@ -777,7 +793,7 @@
             if (currentMainTab === 'tasks') {
                 openModal('modal-task');
             } else if (currentMainTab === 'personnel') {
-                openModal('modal-personnel');
+                openAddPersonnelModal();
             }
         }
 
@@ -789,14 +805,51 @@
             document.getElementById(id).classList.add('hidden');
         }
 
+        function openAddPersonnelModal() {
+            document.getElementById('personnel-edit-id').value = '';
+            document.getElementById('personnel-name').value = '';
+            document.getElementById('personnel-role').value = '';
+            document.getElementById('personnel-phone').value = '';
+            document.getElementById('modal-personnel-title').textContent = 'הוספת איש צוות';
+            
+            selectedGroupsForForm = [];
+            resetGroupChips();
+            openModal('modal-personnel');
+        }
+
+        function resetGroupChips() {
+            document.querySelectorAll('#group-chips-container .chip-btn').forEach(btn => {
+                const group = btn.getAttribute('data-group');
+                if (selectedGroupsForForm.includes(group)) {
+                    btn.className = "chip-btn px-3 py-2 rounded-xl bg-amber-500 border border-amber-500 text-white font-semibold transition-all shadow-sm";
+                } else {
+                    btn.className = "chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all";
+                }
+            });
+        }
+
         function toggleGroupChip(btn, groupName) {
             if (selectedGroupsForForm.includes(groupName)) {
                 selectedGroupsForForm = selectedGroupsForForm.filter(g => g !== groupName);
-                btn.className = "chip-btn px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700 text-slate-300 font-semibold transition-all";
             } else {
                 selectedGroupsForForm.push(groupName);
-                btn.className = "chip-btn px-3 py-2 rounded-xl bg-amber-500 border border-amber-500 text-white font-semibold transition-all shadow-sm";
             }
+            resetGroupChips();
+        }
+
+        function editPersonnel(id) {
+            const p = allPersonnel.find(item => item.id === id);
+            if (!p) return;
+
+            document.getElementById('personnel-edit-id').value = p.id;
+            document.getElementById('personnel-name').value = p.full_name || '';
+            document.getElementById('personnel-role').value = p.role || '';
+            document.getElementById('personnel-phone').value = p.phone || '';
+            document.getElementById('modal-personnel-title').textContent = 'עריכת איש צוות';
+
+            selectedGroupsForForm = p.groups || [];
+            resetGroupChips();
+            openModal('modal-personnel');
         }
 
         async function saveTask(e) {
