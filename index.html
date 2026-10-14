@@ -35,19 +35,6 @@
             background: #334155;
             border-radius: 3px;
         }
-        /* Tooltip style for checkbox */
-        .has-tooltip {
-            position: relative;
-        }
-        .tooltip-text {
-            visibility: hidden;
-            opacity: 0;
-            transition: opacity 0.2s ease-in-out, visibility 0.2s;
-        }
-        .has-tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
     </style>
 </head>
 <body class="min-h-screen pb-20 select-none">
@@ -129,7 +116,7 @@
         </div>
     </div>
 
-    <!-- האפליקציה הראשית - מורחב ל-max-w-7xl (סעיף 1) -->
+    <!-- האפליקציה הראשית -->
     <div id="app-content" class="hidden max-w-7xl mx-auto px-4 py-4 space-y-5">
 
         <!-- Header -->
@@ -149,13 +136,11 @@
                     <span id="user-display-name">--</span>
                 </div>
                 
-                <!-- כפתור לוג מערכת -->
                 <button id="btn-system-log" onclick="openLogsModal()" class="hidden px-3 py-1.5 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-slate-300 text-xs font-medium flex items-center gap-1 transition-colors" title="לוג מערכת">
                     <i data-lucide="history" class="w-3.5 h-3.5 text-amber-500"></i>
                     <span class="hidden sm:inline">לוג</span>
                 </button>
 
-                <!-- כפתור ניהול משתמשים -->
                 <button id="btn-admin-panel" onclick="openAdminModal()" class="hidden p-2 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 rounded-2xl text-amber-500 transition-colors" title="ניהול משתמשים">
                     <i data-lucide="users" class="w-4 h-4"></i>
                 </button>
@@ -200,7 +185,6 @@
                     <span id="tasks-count-label" class="font-bold text-white">0 פעילויות</span>
                 </div>
 
-                <!-- שינוי סעיף 4: "פרויקטים" במקום "פרויקט" + תצוגת ארכיון -->
                 <div class="flex bg-[#0b1329] p-1 rounded-xl border border-slate-800 text-xs font-semibold gap-1">
                     <button id="subtab-btn-routine" onclick="switchTaskSubtab('שוטף')" class="px-3.5 py-1.5 rounded-lg transition-all bg-amber-500 text-white">
                         שוטף
@@ -251,7 +235,7 @@
 
     </div>
 
-    <!-- Modal 1: משימה חדשה / עריכת משימה (סעיף 3) -->
+    <!-- Modal 1: משימה חדשה / עריכת משימה -->
     <div id="modal-task" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative animate-in fade-in zoom-in-95 duration-150">
             <button onclick="closeModal('modal-task')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
@@ -440,7 +424,7 @@
         </div>
     </div>
 
-    <!-- Script Application Logic & Service Worker -->
+    <!-- Script Application Logic -->
     <script>
         const SUPABASE_BASE_URL = 'https://pjujibzoscawmstarerz.supabase.co/rest/v1';
         const SUPABASE_KEY = 'sb_publishable_5mK3Md5VCpXjHTSgVv68GQ_8kmPbg83';
@@ -468,7 +452,6 @@
 
         let selectedGroupsForForm = [];
 
-        // PWA Service Worker & Install Logic
         let deferredPrompt;
 
         if ('serviceWorker' in navigator) {
@@ -708,7 +691,7 @@
         }
 
         function toggleTaskExpand(taskId, e) {
-            if (e.target.closest('button') && !e.target.closest('.accordion-trigger')) {
+            if (e.target.closest('button')) {
                 return;
             }
             if (expandedTaskIds.has(taskId)) {
@@ -724,23 +707,21 @@
             let filtered = [];
 
             if (currentTaskSubtab === 'ארכיון') {
-                // מראה משימות שהושלמו לפני מעל 24 שעות (סעיף 2)
                 filtered = allTasks.filter(t => {
                     if (!t.is_completed || !t.completed_at) return false;
                     const completedTime = new Date(t.completed_at).getTime();
                     return (now - completedTime >= TWENTY_FOUR_HOURS_MS);
                 });
             } else {
-                // מראה משימות פתוחות + משימות שהושלמו ב-24 השעות האחרונות (סעיף 2)
                 filtered = allTasks.filter(t => {
-                    const matchType = (t.type === currentTaskSubtab || (currentTaskSubtab === 'פרויקטים' && t.type === 'פרויקט'));
+                    const matchType = (t.type === currentTaskSubtab || (currentTaskSubtab === 'פרויקטים' && (t.type === 'פרויקט' || t.type === 'פרויקטים')));
                     if (!matchType) return false;
 
-                    if (!t.is_completed) return true; // פתוחה
+                    if (!t.is_completed) return true;
                     
                     if (t.completed_at) {
                         const completedTime = new Date(t.completed_at).getTime();
-                        return (now - completedTime < TWENTY_FOUR_HOURS_MS); // תוך 24 שעות
+                        return (now - completedTime < TWENTY_FOUR_HOURS_MS);
                     }
                     return true;
                 });
@@ -757,7 +738,7 @@
             const isAdmin = currentUser && currentUser.role === 'admin';
 
             list.innerHTML = filtered.map(t => {
-                const subs = allSubtasks.filter(s => s.task_id === t.id);
+                const subs = allSubtasks.filter(s => String(s.task_id) === String(t.id));
                 const isExpanded = expandedTaskIds.has(t.id);
 
                 const formatDate = (d) => {
@@ -771,14 +752,14 @@
                         <div onclick="toggleTaskExpand(${t.id}, event)" class="p-3.5 px-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition-colors">
                             <div class="flex items-center gap-3 min-w-0">
                                 
-                                <!-- Tooltip מרחף לסימון משימה (סעיף 5) -->
-                                <div class="has-tooltip inline-block">
-                                    <span class="tooltip-text pointer-events-none absolute -top-9 right-1/2 translate-x-1/2 bg-amber-500 text-slate-950 text-[11px] font-black px-2.5 py-1 rounded-xl whitespace-nowrap shadow-lg z-30">
-                                        לסימון משימה כהושלמה
-                                    </span>
-                                    <button onclick="toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-5 h-5 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600 hover:border-amber-500'} flex items-center justify-center shrink-0 transition-colors">
+                                <!-- Tooltip למחשב בלבד (נטורל בניידים) -->
+                                <div class="relative group inline-block">
+                                    <button onclick="event.stopPropagation(); toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-5 h-5 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600 hover:border-amber-500'} flex items-center justify-center shrink-0 transition-colors">
                                         ${t.is_completed ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
                                     </button>
+                                    <span class="hidden md:group-hover:block pointer-events-none absolute -top-8 right-1/2 translate-x-1/2 bg-amber-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-md whitespace-nowrap shadow-lg z-50">
+                                        לסימון משימה כהושלמה
+                                    </span>
                                 </div>
                                 
                                 <span class="text-sm font-bold text-white truncate ${t.is_completed ? 'line-through text-slate-400' : ''}">${t.title}</span>
@@ -789,12 +770,10 @@
                             </div>
 
                             <div class="flex items-center gap-2 shrink-0 pr-2">
-                                <!-- כפתור עריכה מהיר במשימה (סעיף 3) -->
-                                ${isAdmin ? `
-                                    <button onclick="editTask(${t.id})" class="p-1.5 text-slate-400 hover:text-amber-500 transition-colors" title="עריכת משימה">
-                                        <i data-lucide="pencil" class="w-4 h-4"></i>
-                                    </button>
-                                ` : ''}
+                                <!-- כפתור עריכת משימה (זמין לכולם בלחיצה) -->
+                                <button onclick="event.stopPropagation(); editTask(${t.id})" class="p-1.5 text-slate-400 hover:text-amber-500 transition-colors" title="עריכת משימה">
+                                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                                </button>
 
                                 ${t.assignee_name ? `<span class="hidden sm:flex items-center gap-1 text-[11px] text-slate-400"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> ${t.assignee_name}</span>` : ''}
                                 <i data-lucide="${isExpanded ? 'chevron-up' : 'chevron-down'}" class="w-4 h-4 text-slate-400 accordion-trigger"></i>
@@ -818,14 +797,12 @@
                                             <div class="flex items-center justify-between bg-[#0b1329] px-3 py-2 rounded-xl border border-slate-800/60 text-xs">
                                                 <span class="${s.is_completed ? 'line-through text-slate-500' : 'text-slate-300'}">${s.title}</span>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
+                                                    <button onclick="event.stopPropagation(); toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
                                                         <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
                                                     </button>
-                                                    ${isAdmin ? `
-                                                        <button onclick="deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
-                                                            <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                                                        </button>
-                                                    ` : ''}
+                                                    <button onclick="event.stopPropagation(); deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
+                                                        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         `).join('')}
@@ -833,20 +810,18 @@
                                 ` : ''}
 
                                 <div class="flex items-center justify-between pt-2 border-t border-slate-800/60">
-                                    ${isAdmin ? `
-                                        <button onclick="addSubtaskPrompt(${t.id})" class="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1">
-                                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> הוסף תת-משימה
-                                        </button>
+                                    <button onclick="event.stopPropagation(); addSubtaskPrompt(${t.id})" class="text-xs font-semibold text-amber-500 hover:text-amber-400 flex items-center gap-1">
+                                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> הוסף תת-משימה
+                                    </button>
 
-                                        <div class="flex items-center gap-2 text-slate-500">
-                                            <button onclick="editTask(${t.id})" class="p-1 hover:text-white" title="ערוך">
-                                                <i data-lucide="pencil" class="w-4 h-4"></i>
-                                            </button>
-                                            <button onclick="deleteTask(${t.id})" class="p-1 hover:text-red-400" title="מחק">
-                                                <i data-lucide="trash-2" class="w-4 h-4"></i>
-                                            </button>
-                                        </div>
-                                    ` : '<div class="text-[11px] text-slate-500 font-medium">מצב צפייה בלבד</div>'}
+                                    <div class="flex items-center gap-2 text-slate-500">
+                                        <button onclick="event.stopPropagation(); editTask(${t.id})" class="p-1 hover:text-white" title="ערוך">
+                                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                                        </button>
+                                        <button onclick="event.stopPropagation(); deleteTask(${t.id})" class="p-1 hover:text-red-400" title="מחק">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         ` : ''}
@@ -855,6 +830,58 @@
             }).join('');
 
             lucide.createIcons();
+        }
+
+        function editTask(id) {
+            const t = allTasks.find(item => String(item.id) === String(id));
+            if (!t) return;
+
+            document.getElementById('task-edit-id').value = t.id;
+            document.getElementById('task-type').value = (t.type === 'פרויקט' || t.type === 'פרויקטים') ? 'פרויקטים' : 'שוטף';
+            document.getElementById('task-title').value = t.title || '';
+            document.getElementById('task-content').value = t.content || '';
+            document.getElementById('task-due-date').value = t.due_date || '';
+
+            const select = document.getElementById('task-assignee-select');
+            const input = document.getElementById('task-assignee-input');
+
+            select.classList.remove('hidden');
+            input.classList.add('hidden');
+            select.value = t.assignee_name || '';
+
+            document.getElementById('modal-task-title').textContent = 'עריכת משימה';
+            document.getElementById('modal-task').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function saveTask(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('task-edit-id').value;
+            const type = document.getElementById('task-type').value;
+            const title = document.getElementById('task-title').value.trim();
+            const content = document.getElementById('task-content').value.trim();
+            const dueDate = document.getElementById('task-due-date').value;
+
+            const select = document.getElementById('task-assignee-select');
+            const input = document.getElementById('task-assignee-input');
+            const assigneeName = select.classList.contains('hidden') ? input.value.trim() : select.value;
+
+            if (!title) return;
+
+            const payload = { type, title, content, due_date: dueDate || null, assignee_name: assigneeName };
+
+            try {
+                if (editId) {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                    await logAction('עדכון', `עדכון משימה: "${title}"`);
+                } else {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
+                    await logAction('יצירה', `יצירת משימה חדשה: "${title}" (${type})`);
+                }
+                closeModal('modal-task');
+                loadAllData();
+            } catch (err) {}
         }
 
         function renderPersonnel() {
@@ -937,12 +964,6 @@
         }
 
         function openModal(id) {
-            const isAdmin = currentUser && currentUser.role === 'admin';
-            const restrictedModals = ['modal-task', 'modal-personnel', 'modal-admin', 'modal-logs'];
-
-            if (!isAdmin && restrictedModals.includes(id)) {
-                return;
-            }
             document.getElementById(id).classList.remove('hidden');
             lucide.createIcons();
         }
@@ -952,7 +973,6 @@
         }
 
         function openAddPersonnelModal() {
-            if (currentUser && currentUser.role !== 'admin') return;
             document.getElementById('personnel-edit-id').value = '';
             document.getElementById('personnel-name').value = '';
             document.getElementById('personnel-role').value = '';
@@ -985,8 +1005,7 @@
         }
 
         function editPersonnel(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-            const p = allPersonnel.find(item => item.id === id);
+            const p = allPersonnel.find(item => String(item.id) === String(id));
             if (!p) return;
 
             document.getElementById('personnel-edit-id').value = p.id;
@@ -1000,62 +1019,8 @@
             openModal('modal-personnel');
         }
 
-        async function saveTask(e) {
-            e.preventDefault();
-            if (currentUser && currentUser.role !== 'admin') return;
-
-            const editId = document.getElementById('task-edit-id').value;
-            const type = document.getElementById('task-type').value;
-            const title = document.getElementById('task-title').value.trim();
-            const content = document.getElementById('task-content').value.trim();
-            const dueDate = document.getElementById('task-due-date').value;
-
-            const select = document.getElementById('task-assignee-select');
-            const input = document.getElementById('task-assignee-input');
-            const assigneeName = select.classList.contains('hidden') ? input.value.trim() : select.value;
-
-            if (!title) return;
-
-            const payload = { type, title, content, due_date: dueDate || null, assignee_name: assigneeName };
-
-            try {
-                if (editId) {
-                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${editId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
-                    await logAction('עדכון', `עדכון משימה: "${title}"`);
-                } else {
-                    await fetch(`${SUPABASE_BASE_URL}/sec_tasks`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(payload) });
-                    await logAction('יצירה', `יצירת משימה חדשה: "${title}" (${type})`);
-                }
-                closeModal('modal-task');
-                loadAllData();
-            } catch (err) {}
-        }
-
-        function editTask(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-            const t = allTasks.find(item => item.id === id);
-            if (!t) return;
-
-            document.getElementById('task-edit-id').value = t.id;
-            document.getElementById('task-type').value = t.type;
-            document.getElementById('task-title').value = t.title;
-            document.getElementById('task-content').value = t.content || '';
-            document.getElementById('task-due-date').value = t.due_date || '';
-
-            const select = document.getElementById('task-assignee-select');
-            const input = document.getElementById('task-assignee-input');
-
-            select.classList.remove('hidden');
-            input.classList.add('hidden');
-            select.value = t.assignee_name || '';
-
-            document.getElementById('modal-task-title').textContent = 'עריכת משימה';
-            openModal('modal-task');
-        }
-
         async function savePersonnel(e) {
             e.preventDefault();
-            if (currentUser && currentUser.role !== 'admin') return;
 
             const editId = document.getElementById('personnel-edit-id').value;
             const fullName = document.getElementById('personnel-name').value.trim();
@@ -1080,8 +1045,6 @@
         }
 
         async function addSubtaskPrompt(taskId) {
-            if (currentUser && currentUser.role !== 'admin') return;
-
             const title = prompt("הכנס תיאור לתת-משימה:");
             if (!title || !title.trim()) return;
 
@@ -1097,7 +1060,7 @@
         }
 
         async function toggleTaskComplete(id, completed) {
-            const t = allTasks.find(item => item.id === id);
+            const t = allTasks.find(item => String(item.id) === String(id));
             const payload = { 
                 is_completed: completed, 
                 completed_at: completed ? new Date().toISOString() : null 
@@ -1109,16 +1072,14 @@
         }
 
         async function toggleSubtaskComplete(id, completed) {
-            const sub = allSubtasks.find(item => item.id === id);
+            const sub = allSubtasks.find(item => String(item.id) === String(id));
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify({ is_completed: completed }) });
             await logAction('עדכון', `סימון תת-משימה "${sub?.title || id}" כ${completed ? 'הושלמה' : 'פעילה'}`);
             loadAllData();
         }
 
         async function deleteTask(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-
-            const t = allTasks.find(item => item.id === id);
+            const t = allTasks.find(item => String(item.id) === String(id));
             if (!confirm("למחוק משימה זו?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_tasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
             await logAction('מחיקה', `מחיקת משימה: "${t?.title || id}"`);
@@ -1126,18 +1087,14 @@
         }
 
         async function deleteSubtask(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-
-            const sub = allSubtasks.find(item => item.id === id);
+            const sub = allSubtasks.find(item => String(item.id) === String(id));
             await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
             await logAction('מחיקה', `מחיקת תת-משימה: "${sub?.title || id}"`);
             loadAllData();
         }
 
         async function deletePersonnel(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-
-            const p = allPersonnel.find(item => item.id === id);
+            const p = allPersonnel.find(item => String(item.id) === String(id));
             if (!confirm("למחוק איש צוות זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_personnel?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
             await logAction('מחיקה', `מחיקת איש צוות: ${p?.full_name || id}`);
@@ -1207,7 +1164,7 @@
                 });
 
                 if (res.ok) {
-                    const u = allUsers.find(item => item.id === userId);
+                    const u = allUsers.find(item => String(item.id) === String(userId));
                     if (u) u[permField] = isChecked;
                     await logAction('עדכון', `עדכון הרשאת ${permField} למשתמש ${u?.full_name || userId} ל-${isChecked}`);
                 }
@@ -1218,7 +1175,6 @@
 
         async function addUser(e) {
             e.preventDefault();
-            if (currentUser && currentUser.role !== 'admin') return;
 
             const fullName = document.getElementById('new-user-name').value.trim();
             const email = document.getElementById('new-user-email').value.trim();
@@ -1259,9 +1215,7 @@
         }
 
         async function deleteUser(id) {
-            if (currentUser && currentUser.role !== 'admin') return;
-
-            const u = allUsers.find(item => item.id === id);
+            const u = allUsers.find(item => String(item.id) === String(id));
             if (!confirm("למחוק משתמש זה?")) return;
             await fetch(`${SUPABASE_BASE_URL}/sec_users?id=eq.${id}`, { method: 'DELETE', headers: apiHeaders });
             await logAction('מחיקה', `מחיקת משתמש מערכת: ${u?.full_name || id}`);
@@ -1269,8 +1223,6 @@
         }
 
         async function openLogsModal() {
-            if (currentUser && currentUser.role !== 'admin') return;
-
             openModal('modal-logs');
             const container = document.getElementById('logs-container');
             container.innerHTML = `<div class="text-center py-6 text-slate-500">טוען לוגים...</div>`;
