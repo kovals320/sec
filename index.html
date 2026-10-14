@@ -224,13 +224,7 @@
 
         <!-- תוכן טאב 3: חמ"ל -->
         <div id="view-war-room" class="hidden space-y-4">
-            <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-6 text-center space-y-3">
-                <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-2xl">
-                    📻
-                </div>
-                <h2 class="text-base font-bold text-white">צ'קליסט וניהול אירועי חמ"ל</h2>
-                <p class="text-xs text-slate-400">המערכת מוכנה להגדרת נוהל הפעלת חמ"ל בזמן חירום.</p>
-            </div>
+            <div id="hamal-root"></div>
         </div>
 
     </div>
@@ -730,6 +724,8 @@
             document.getElementById('view-tasks').classList.toggle('hidden', tab !== 'tasks');
             document.getElementById('view-personnel').classList.toggle('hidden', tab !== 'personnel');
             document.getElementById('view-war-room').classList.toggle('hidden', tab !== 'war-room');
+
+            if (tab === 'war-room') loadHamal();
         }
 
         function switchTaskSubtab(sub) {
@@ -1379,6 +1375,400 @@
                 container.innerHTML = `<div class="text-center py-6 text-red-400">שגיאה שטעינת הלוגים</div>`;
             }
         }
+
+        // =====================================================
+        // חמ"ל - הפעלת אירוע, צ'קליסט 20 שלבים וארכיון למידה
+        // =====================================================
+        const HAMAL_STEPS = [
+            `הגעה פיזית למיקום החמ"ל ופתיחת דלתות/גישה.`,
+            `הפעלת מחשבים, צגים ומערכות שליטה ובקרה (שו"ב).`,
+            `וידוא חיבור תקין לרשת האינטרנט וקווי תקשורת גיבוי.`,
+            `בדיקת זמינות וטעינה של מכשירי קשר ניידים (מירס/רשת קשר פנים-ארגונית).`,
+            `מינוי רשמי של מנהל חמ"ל/אחראי משמרת לאירוע.`,
+            `חלוקת תפקידים והגדרת תחומי אחריות לצוות הנוכחי.`,
+            `פתיחת יומן מבצעים דיגיטלי או ידני לתיעוד שוטף של אירועים והחלטות.`,
+            `איסוף דיווח ראשוני ובירור פרטים מדויקים על מהות האירוע והמיקום.`,
+            `יצירת קשר ראשוני עם הגורמים בשטח לקבלת תמונת מצב חיה.`,
+            `עדכון גורמי הפיקוד הממונים/הנהלה על פתיחת החמ"ל ותמונת המצב.`,
+            `פתיחת ערוצי תקשורת ישירים עם מוקדי חירום רלוונטיים (משטרה, כב"א, מד"א, פקע"ר).`,
+            `גיבוש והפצת הנחיות ראשונות ובטיחותיות לכלל השוהים בגזרה/ביישוב.`,
+            `וידוא פתיחת מרחבים מוגנים או הפעלת שערי חירום (במידת הצורך).`,
+            `הקמת חמ"ל תקשורת או קבוצת עדכונים שקטה לעדכונים שוטפים בלבד.`,
+            `ביצוע הערכת מצב תקופתית (כל 15-30 דקות בהתאם להתפתחות).`,
+            `מעקב רציף אחר מענה לפניות המגיעות מהשטח או מהתושבים/עובדים.`,
+            `רישום כל החלטה חריגה או מתן הוראה מבצעית ביומן המבצעים עם חותמת זמן.`,
+            `קבלת אישור רשמי לסיום האירוע והסרת כוננות מהגורמים המוסמכים.`,
+            `הפצת הודעת חזרה לשגרה והרגעת המערכת.`,
+            `סגירת יומן המבצעים, ריכוז מסקנות ראשוניות וקיום תחקיר קצר לצוות.`
+        ];
+
+        let hamalActive = null;
+        let hamalSteps = [];
+        let hamalUpdates = [];
+        let hamalHistory = [];
+        let hamalDetail = null;          // { event, steps, updates } בעת צפייה באירוע מהארכיון
+        let hamalOpenSteps = new Set();
+        let hamalDrafts = {};
+        let hamalLoaded = false;
+        let hamalError = '';
+        let hamalBusy = false;
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        function hamalFmt(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function hamalDuration(fromIso, toIso) {
+            if (!fromIso || !toIso) return '';
+            const mins = Math.max(0, Math.round((new Date(toIso) - new Date(fromIso)) / 60000));
+            const h = Math.floor(mins / 60), m = mins % 60;
+            if (h === 0) return `${m} דק'`;
+            return `${h} ש' ${m} דק'`;
+        }
+
+        function hamalDraftsActive() {
+            const ae = document.activeElement;
+            return Object.values(hamalDrafts).some(v => v && v.trim()) || (ae && ae.tagName === 'TEXTAREA');
+        }
+
+        async function loadHamal(silent) {
+            if (!currentUser || !currentUser.perm_war_room) return;
+            if (silent && (hamalDetail || hamalBusy || hamalDraftsActive())) return;
+            const q = encodeURIComponent;
+            try {
+                const resA = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_events?status=eq.${q('פעיל')}&select=*`, { headers: apiHeaders });
+                if (!resA.ok) throw new Error('events');
+                const act = await resA.json();
+                hamalActive = act[0] || null;
+
+                if (hamalActive) {
+                    const [rs, ru] = await Promise.all([
+                        fetch(`${SUPABASE_BASE_URL}/sec_hamal_steps?event_id=eq.${hamalActive.id}&select=*&order=step_number.asc`, { headers: apiHeaders }),
+                        fetch(`${SUPABASE_BASE_URL}/sec_hamal_updates?event_id=eq.${hamalActive.id}&select=*&order=created_at.asc`, { headers: apiHeaders })
+                    ]);
+                    hamalSteps = rs.ok ? await rs.json() : [];
+                    hamalUpdates = ru.ok ? await ru.json() : [];
+                } else {
+                    hamalSteps = [];
+                    hamalUpdates = [];
+                    hamalOpenSteps = new Set();
+                    hamalDrafts = {};
+                }
+
+                const resH = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_events?status=eq.${q('נסגר')}&select=*,sec_hamal_steps(is_done),sec_hamal_updates(id)&order=created_at.desc`, { headers: apiHeaders });
+                hamalHistory = resH.ok ? await resH.json() : [];
+                hamalError = '';
+            } catch (e) {
+                hamalError = 'לא ניתן לטעון את נתוני החמ"ל. יש לוודא שטבלאות sec_hamal נוצרו ב-Supabase.';
+            }
+            hamalLoaded = true;
+            renderHamal();
+        }
+
+        setInterval(() => {
+            if (currentMainTab === 'war-room' && currentUser && !document.hidden) loadHamal(true);
+        }, 20000);
+
+        async function startHamal() {
+            if (hamalBusy) return;
+            if (!confirm('להפעיל חמ"ל ולפתוח אירוע חדש?')) return;
+            hamalBusy = true;
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_events`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ started_by: currentUser.full_name, started_by_email: currentUser.email, status: 'פעיל' })
+                });
+                if (res.status === 409) {
+                    alert('כבר קיים אירוע חמ"ל פעיל. הנתונים יתרעננו.');
+                    hamalBusy = false;
+                    await loadHamal();
+                    return;
+                }
+                if (!res.ok) throw new Error('event');
+                const ev = (await res.json())[0];
+
+                const stepsPayload = HAMAL_STEPS.map((t, i) => ({ event_id: ev.id, step_number: i + 1, step_text: t }));
+                const resS = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_steps`, { method: 'POST', headers: apiHeaders, body: JSON.stringify(stepsPayload) });
+                if (!resS.ok) {
+                    await fetch(`${SUPABASE_BASE_URL}/sec_hamal_events?id=eq.${ev.id}`, { method: 'DELETE', headers: apiHeaders });
+                    throw new Error('steps');
+                }
+                await logAction('חמ"ל', `הופעל חמ"ל - אירוע #${ev.id}`);
+            } catch (e) {
+                alert('שגיאה בהפעלת החמ"ל');
+            }
+            hamalBusy = false;
+            await loadHamal();
+        }
+
+        async function toggleHamalStep(stepId) {
+            if (hamalBusy) return;
+            const step = hamalSteps.find(s => s.id === stepId);
+            if (!step) return;
+            hamalBusy = true;
+            const newDone = !step.is_done;
+            const payload = newDone
+                ? { is_done: true, done_at: new Date().toISOString(), done_by: currentUser.full_name }
+                : { is_done: false, done_at: null, done_by: null };
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_steps?id=eq.${stepId}`, { method: 'PATCH', headers: apiHeaders, body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error();
+                Object.assign(step, payload);
+                await logAction('חמ"ל', `${newDone ? 'סומן' : 'בוטל סימון'} שלב ${step.step_number} באירוע #${hamalActive.id}`);
+            } catch (e) {
+                alert('שגיאה בעדכון השלב');
+            }
+            hamalBusy = false;
+            renderHamal();
+
+            if (newDone && hamalSteps.length > 0 && hamalSteps.every(s => s.is_done)) {
+                if (confirm('כל השלבים סומנו.\nלסגור את האירוע ולשמור אותו בארכיון הלמידה?')) {
+                    await closeHamal(false, true);
+                }
+            }
+        }
+
+        function toggleHamalStepOpen(n) {
+            if (hamalOpenSteps.has(n)) hamalOpenSteps.delete(n); else hamalOpenSteps.add(n);
+            renderHamal();
+        }
+
+        async function addHamalUpdate(n) {
+            if (hamalBusy) return;
+            const content = (hamalDrafts[n] || '').trim();
+            if (!content) return;
+            hamalBusy = true;
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_updates`, {
+                    method: 'POST',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ event_id: hamalActive.id, step_number: n, user_name: currentUser.full_name, content })
+                });
+                if (!res.ok) throw new Error();
+                const row = (await res.json())[0];
+                hamalUpdates.push(row);
+                hamalDrafts[n] = '';
+            } catch (e) {
+                alert('שגיאה בשמירת העדכון');
+            }
+            hamalBusy = false;
+            renderHamal();
+        }
+
+        async function closeHamal(manual, skipConfirm) {
+            if (!hamalActive || hamalBusy) return;
+            const remaining = hamalSteps.filter(s => !s.is_done).length;
+            if (!skipConfirm) {
+                const msg = remaining > 0
+                    ? `נותרו ${remaining} שלבים שלא סומנו.\nלסגור את האירוע ולשמור אותו בארכיון בכל זאת?`
+                    : 'לסגור את האירוע ולשמור אותו בארכיון הלמידה?';
+                if (!confirm(msg)) return;
+            }
+            hamalBusy = true;
+            try {
+                const res = await fetch(`${SUPABASE_BASE_URL}/sec_hamal_events?id=eq.${hamalActive.id}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({
+                        status: 'נסגר',
+                        closed_at: new Date().toISOString(),
+                        closed_by: currentUser.full_name,
+                        closed_manually: remaining > 0
+                    })
+                });
+                if (!res.ok) throw new Error();
+                await logAction('חמ"ל', `נסגר אירוע חמ"ל #${hamalActive.id}${remaining > 0 ? ` (נסגר ידנית, ${remaining} שלבים לא סומנו)` : ''}`);
+            } catch (e) {
+                alert('שגיאה בסגירת האירוע');
+            }
+            hamalBusy = false;
+            await loadHamal();
+        }
+
+        async function openHamalDetail(eventId) {
+            const ev = hamalHistory.find(e => e.id === eventId);
+            if (!ev) return;
+            try {
+                const [rs, ru] = await Promise.all([
+                    fetch(`${SUPABASE_BASE_URL}/sec_hamal_steps?event_id=eq.${eventId}&select=*&order=step_number.asc`, { headers: apiHeaders }),
+                    fetch(`${SUPABASE_BASE_URL}/sec_hamal_updates?event_id=eq.${eventId}&select=*&order=created_at.asc`, { headers: apiHeaders })
+                ]);
+                hamalDetail = { event: ev, steps: rs.ok ? await rs.json() : [], updates: ru.ok ? await ru.json() : [] };
+            } catch (e) {
+                alert('שגיאה בטעינת האירוע');
+                return;
+            }
+            renderHamal();
+            window.scrollTo({ top: 0 });
+        }
+
+        function closeHamalDetail() {
+            hamalDetail = null;
+            renderHamal();
+        }
+
+        function hamalStepRowHtml(s, updates, opts) {
+            const readOnly = opts.readOnly;
+            const open = readOnly || hamalOpenSteps.has(s.step_number);
+            const ups = updates.filter(u => u.step_number === s.step_number);
+            const doneMeta = s.is_done
+                ? `<div class="text-[11px] text-emerald-400/80 mt-1">בוצע ${hamalFmt(s.done_at)}${s.done_by ? ' · ' + esc(s.done_by) : ''}</div>`
+                : (readOnly ? `<div class="text-[11px] text-red-400/80 mt-1">לא בוצע</div>` : '');
+
+            const checkBtn = readOnly
+                ? `<div class="mt-0.5 w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center ${s.is_done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-700'}">${s.is_done ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}</div>`
+                : `<button onclick="toggleHamalStep(${s.id})" class="mt-0.5 w-6 h-6 shrink-0 rounded-full border-2 flex items-center justify-center transition-colors ${s.is_done ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-600 hover:border-amber-500'}">${s.is_done ? '<i data-lucide="check" class="w-3.5 h-3.5"></i>' : ''}</button>`;
+
+            const commentBtn = readOnly
+                ? (ups.length ? `<div class="shrink-0 flex items-center gap-1 text-xs text-amber-500"><i data-lucide="message-square" class="w-4 h-4"></i>${ups.length}</div>` : '')
+                : `<button onclick="toggleHamalStepOpen(${s.step_number})" class="shrink-0 flex items-center gap-1 px-2 py-1 rounded-lg text-xs transition-colors ${ups.length ? 'text-amber-500' : 'text-slate-500 hover:text-slate-300'}"><i data-lucide="message-square" class="w-4 h-4"></i>${ups.length || ''}</button>`;
+
+            const updatesHtml = ups.map(u => `
+                <div class="bg-[#0b1329] rounded-xl p-2.5 text-xs">
+                    <div class="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                        <span class="font-bold text-amber-500">${esc(u.user_name)}</span>
+                        <span class="font-mono">${hamalFmt(u.created_at)}</span>
+                    </div>
+                    <div class="text-slate-200 mt-1 whitespace-pre-wrap leading-relaxed">${esc(u.content)}</div>
+                </div>`).join('');
+
+            const addBox = readOnly ? '' : `
+                <textarea rows="2" oninput="hamalDrafts[${s.step_number}] = this.value" placeholder="הוסף עדכון חופשי..."
+                    class="w-full px-3 py-2 rounded-xl bg-[#0b1329] border border-slate-700/80 text-xs text-white focus:outline-none focus:border-amber-500 select-text resize-none">${esc(hamalDrafts[s.step_number] || '')}</textarea>
+                <button onclick="addHamalUpdate(${s.step_number})" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white text-xs font-bold px-3.5 py-2 rounded-xl transition-all">הוסף עדכון</button>`;
+
+            const panel = (open && (ups.length || !readOnly))
+                ? `<div class="border-t border-slate-800 p-3 space-y-2">${updatesHtml}${addBox}</div>` : '';
+
+            return `
+                <div class="bg-[#131d38] border ${s.is_done ? 'border-emerald-500/25' : 'border-slate-800'} rounded-2xl">
+                    <div class="flex items-start gap-3 p-3">
+                        ${checkBtn}
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm leading-snug ${s.is_done ? 'text-slate-400' : 'text-white'}"><span class="text-slate-500 font-mono ml-1">${s.step_number}.</span>${esc(s.step_text)}</div>
+                            ${doneMeta}
+                        </div>
+                        ${commentBtn}
+                    </div>
+                    ${panel}
+                </div>`;
+        }
+
+        function renderHamal() {
+            const root = document.getElementById('hamal-root');
+            if (!root) return;
+
+            if (hamalDetail) {
+                const { event: ev, steps, updates } = hamalDetail;
+                const done = steps.filter(s => s.is_done).length;
+                root.innerHTML = `
+                    <div class="space-y-3">
+                        <button onclick="closeHamalDetail()" class="flex items-center gap-1.5 text-xs font-bold text-slate-300 hover:text-white bg-[#131d38] border border-slate-800 px-3.5 py-2 rounded-xl transition-colors">
+                            <i data-lucide="arrow-right" class="w-4 h-4 text-amber-500"></i> חזרה לחמ"ל
+                        </button>
+                        <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-4 space-y-1.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="text-sm font-bold text-white">אירוע חמ"ל #${ev.id}</h3>
+                                ${ev.closed_manually ? '<span class="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">נסגר ידנית</span>' : ''}
+                            </div>
+                            <div class="text-xs text-slate-400">הופעל: ${hamalFmt(ev.created_at)} · ${esc(ev.started_by)}</div>
+                            <div class="text-xs text-slate-400">נסגר: ${hamalFmt(ev.closed_at)} · ${esc(ev.closed_by)}</div>
+                            <div class="text-xs text-slate-400">משך: ${hamalDuration(ev.created_at, ev.closed_at)} · ${done}/${steps.length} שלבים בוצעו · ${updates.length} עדכונים</div>
+                        </div>
+                        <div class="space-y-2">${steps.map(s => hamalStepRowHtml(s, updates, { readOnly: true })).join('')}</div>
+                    </div>`;
+                lucide.createIcons();
+                return;
+            }
+
+            if (!hamalLoaded && !hamalError) {
+                root.innerHTML = `<div class="text-center py-10 text-slate-500 text-xs">טוען נתוני חמ"ל...</div>`;
+                return;
+            }
+
+            let html = '';
+
+            if (hamalError) {
+                html += `<div class="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 text-xs text-red-300">${esc(hamalError)}</div>`;
+            }
+
+            if (!hamalError && !hamalActive) {
+                html += `
+                    <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-6 text-center space-y-4">
+                        <div class="w-12 h-12 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-center mx-auto text-amber-500 text-2xl">📻</div>
+                        <div class="space-y-1">
+                            <h2 class="text-base font-bold text-white">אין אירוע חמ"ל פעיל</h2>
+                            <p class="text-xs text-slate-400">לחיצה על הכפתור תפתח אירוע חדש עם צ'קליסט של ${HAMAL_STEPS.length} שלבים.</p>
+                        </div>
+                        <button onclick="startHamal()" class="bg-amber-500 hover:bg-amber-600 active:scale-95 text-white font-bold text-sm px-8 py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all">
+                            הפעל חמ"ל
+                        </button>
+                    </div>`;
+            }
+
+            if (hamalActive) {
+                const done = hamalSteps.filter(s => s.is_done).length;
+                const total = hamalSteps.length || HAMAL_STEPS.length;
+                const pct = Math.round((done / total) * 100);
+                html += `
+                    <div class="bg-[#131d38] border border-amber-500/40 rounded-3xl p-4 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <div>
+                                <div class="flex items-center gap-2 text-sm font-bold text-white">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span> חמ"ל פעיל
+                                </div>
+                                <div class="text-[11px] text-slate-400 mt-1">הופעל ${hamalFmt(hamalActive.created_at)} · ${esc(hamalActive.started_by)}</div>
+                            </div>
+                            <button onclick="closeHamal(true)" class="text-xs font-bold text-slate-200 bg-[#0b1329] hover:bg-slate-800 border border-slate-700/60 px-3.5 py-2 rounded-xl transition-colors">
+                                סגור אירוע
+                            </button>
+                        </div>
+                        <div class="space-y-1">
+                            <div class="flex items-center justify-between text-xs">
+                                <span class="text-slate-400">התקדמות</span>
+                                <span class="font-bold text-white">${done}/${total}</span>
+                            </div>
+                            <div class="h-2 bg-[#0b1329] rounded-full overflow-hidden">
+                                <div class="h-full bg-emerald-500 transition-all" style="width:${pct}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">${hamalSteps.map(s => hamalStepRowHtml(s, hamalUpdates, { readOnly: false })).join('')}</div>`;
+            }
+
+            html += `
+                <div class="pt-2 space-y-2">
+                    <div class="flex items-center gap-2 text-sm font-bold text-white px-1">
+                        <i data-lucide="archive" class="w-4 h-4 text-amber-500"></i> ארכיון אירועים ללמידה
+                        <span class="text-xs font-normal text-slate-500">(${hamalHistory.length})</span>
+                    </div>
+                    ${hamalHistory.length === 0
+                        ? `<div class="text-center py-6 text-slate-500 text-xs bg-[#131d38] border border-slate-800 rounded-2xl">עדיין אין אירועים בארכיון</div>`
+                        : hamalHistory.map(ev => {
+                            const stepsArr = ev.sec_hamal_steps || [];
+                            const done = stepsArr.filter(s => s.is_done).length;
+                            const ups = (ev.sec_hamal_updates || []).length;
+                            return `
+                                <button onclick="openHamalDetail(${ev.id})" class="w-full text-right bg-[#131d38] hover:bg-[#182445] border border-slate-800 rounded-2xl p-3.5 transition-colors space-y-1">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-sm font-bold text-white">${hamalFmt(ev.created_at)}</span>
+                                        ${ev.closed_manually ? '<span class="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">נסגר ידנית</span>' : '<span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">הושלם</span>'}
+                                    </div>
+                                    <div class="text-xs text-slate-400">${esc(ev.started_by)} · משך ${hamalDuration(ev.created_at, ev.closed_at)} · ${done}/${stepsArr.length} שלבים · ${ups} עדכונים</div>
+                                </button>`;
+                        }).join('')}
+                </div>`;
+
+            root.innerHTML = html;
+            lucide.createIcons();
+        }
+
     </script>
 </body>
 </html>
