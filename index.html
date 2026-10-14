@@ -276,7 +276,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-1">
                         <label class="font-semibold text-slate-400">אחראי</label>
-                        <button type="button" onclick="toggleManualAssignee()" class="text-amber-500 hover:underline flex items-center gap-1 font-semibold">
+                        <button type="button" onclick="toggleManualAssignee('task')" class="text-amber-500 hover:underline flex items-center gap-1 font-semibold">
                             <i data-lucide="pencil" class="w-3 h-3"></i> מילוי ידני
                         </button>
                     </div>
@@ -291,6 +291,61 @@
                         שמור משימה
                     </button>
                     <button type="button" onclick="closeModal('modal-task')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
+                        ביטול
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 1.5: עריכת תת-משימה מלאה -->
+    <div id="modal-subtask" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-[#131d38] border border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 relative animate-in fade-in zoom-in-95 duration-150">
+            <button onclick="closeModal('modal-subtask')" class="absolute top-5 left-5 text-slate-400 hover:text-white">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+
+            <h3 class="text-base font-bold text-white pr-2">עריכת תת-משימה</h3>
+
+            <form onsubmit="saveSubtaskFull(event)" class="space-y-3.5 text-xs">
+                <input type="hidden" id="subtask-edit-id" value="">
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">כותרת תת-המשימה</label>
+                    <input type="text" id="subtask-title" placeholder="תיאור קצר לתת-משימה" required
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">תוכן / פירוט נוסף</label>
+                    <textarea id="subtask-content" rows="3" placeholder="פירוט, הערות או הנחיות נוספות..."
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white placeholder-slate-600 focus:outline-none focus:border-amber-500 resize-none"></textarea>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-slate-400 mb-1">תאריך יעד</label>
+                    <input type="date" id="subtask-due-date"
+                        class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label class="font-semibold text-slate-400">אחראי</label>
+                        <button type="button" onclick="toggleManualAssignee('subtask')" class="text-amber-500 hover:underline flex items-center gap-1 font-semibold">
+                            <i data-lucide="pencil" class="w-3 h-3"></i> מילוי ידני
+                        </button>
+                    </div>
+                    
+                    <select id="subtask-assignee-select" class="w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500"></select>
+                    
+                    <input type="text" id="subtask-assignee-input" placeholder="שם האחראי" class="hidden w-full px-4 py-3 rounded-2xl bg-[#0b1329] border border-slate-700/80 text-white focus:outline-none focus:border-amber-500">
+                </div>
+
+                <div class="pt-2 space-y-2">
+                    <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 active:scale-[0.98] text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm">
+                        שמור תת-משימה
+                    </button>
+                    <button type="button" onclick="closeModal('modal-subtask')" class="w-full py-2.5 text-slate-400 hover:text-white font-semibold">
                         ביטול
                     </button>
                 </div>
@@ -488,6 +543,7 @@
 
         function goHome() {
             closeModal('modal-task');
+            closeModal('modal-subtask');
             closeModal('modal-personnel');
             closeModal('modal-admin');
             closeModal('modal-logs');
@@ -787,21 +843,32 @@
                                 </div>
 
                                 ${subs.length > 0 ? `
-                                    <div class="space-y-1.5 pt-1">
+                                    <div class="space-y-2 pt-1">
                                         <span class="text-[11px] font-semibold text-slate-400 block">תת-משימות:</span>
                                         ${subs.map(s => `
-                                            <div class="flex items-center justify-between bg-[#0b1329] px-3 py-2 rounded-xl border border-slate-800/60 text-xs">
-                                                <span class="${s.is_completed ? 'line-through text-slate-500' : 'text-slate-300'}">${s.title}</span>
-                                                <div class="flex items-center gap-2">
-                                                    <button onclick="event.stopPropagation(); toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
-                                                        <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
-                                                    </button>
-                                                    <button onclick="event.stopPropagation(); editSubtask(${s.id})" class="text-slate-400 hover:text-amber-500 p-1" title="ערוך תת-משימה">
-                                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                                                    </button>
-                                                    <button onclick="event.stopPropagation(); deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400 p-1">
-                                                        <i data-lucide="trash" class="w-3.5 h-3.5"></i>
-                                                    </button>
+                                            <div class="bg-[#0b1329] p-3 rounded-xl border border-slate-800/60 text-xs space-y-2">
+                                                <div class="flex items-center justify-between">
+                                                    <div class="flex items-center gap-2">
+                                                        <button onclick="event.stopPropagation(); toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
+                                                            <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
+                                                        </button>
+                                                        <span class="font-bold ${s.is_completed ? 'line-through text-slate-500' : 'text-slate-200'}">${s.title}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <button onclick="event.stopPropagation(); editSubtaskModal(${s.id})" class="text-slate-400 hover:text-amber-500 p-1" title="ערוך תת-משימה">
+                                                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                        <button onclick="event.stopPropagation(); deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400 p-1">
+                                                            <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                ${s.content ? `<p class="text-[11px] text-slate-400 pr-6 leading-relaxed">${s.content}</p>` : ''}
+
+                                                <div class="flex flex-wrap items-center gap-3 text-[10px] text-slate-500 pr-6 pt-1">
+                                                    ${s.due_date ? `<span class="flex items-center gap-1 text-amber-500/80"><i data-lucide="clock" class="w-3 h-3"></i> יעד: ${formatDate(s.due_date)}</span>` : ''}
+                                                    ${s.assignee_name ? `<span class="flex items-center gap-1 text-slate-400"><i data-lucide="user" class="w-3 h-3 text-slate-500"></i> אחראי: ${s.assignee_name}</span>` : ''}
                                                 </div>
                                             </div>
                                         `).join('')}
@@ -853,22 +920,57 @@
             lucide.createIcons();
         }
 
-        async function editSubtask(subtaskId) {
+        function editSubtaskModal(subtaskId) {
             const sub = allSubtasks.find(s => String(s.id) === String(subtaskId));
             if (!sub) return;
 
-            const newTitle = prompt("ערוך את תיאור התת-משימה:", sub.title);
-            if (newTitle === null || !newTitle.trim()) return;
+            document.getElementById('subtask-edit-id').value = sub.id;
+            document.getElementById('subtask-title').value = sub.title || '';
+            document.getElementById('subtask-content').value = sub.content || '';
+            document.getElementById('subtask-due-date').value = sub.due_date || '';
+
+            const select = document.getElementById('subtask-assignee-select');
+            const input = document.getElementById('subtask-assignee-input');
+
+            select.classList.remove('hidden');
+            input.classList.add('hidden');
+            select.value = sub.assignee_name || '';
+
+            document.getElementById('modal-subtask').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        async function saveSubtaskFull(e) {
+            e.preventDefault();
+
+            const editId = document.getElementById('subtask-edit-id').value;
+            const title = document.getElementById('subtask-title').value.trim();
+            const content = document.getElementById('subtask-content').value.trim();
+            const dueDate = document.getElementById('subtask-due-date').value;
+
+            const select = document.getElementById('subtask-assignee-select');
+            const input = document.getElementById('subtask-assignee-input');
+            const assigneeName = select.classList.contains('hidden') ? input.value.trim() : select.value;
+
+            if (!title || !editId) return;
+
+            const payload = {
+                title,
+                content: content || null,
+                due_date: dueDate || null,
+                assignee_name: assigneeName || null
+            };
 
             try {
-                await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${subtaskId}`, {
+                await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${editId}`, {
                     method: 'PATCH',
                     headers: apiHeaders,
-                    body: JSON.stringify({ title: newTitle.trim() })
+                    body: JSON.stringify(payload)
                 });
-                await logAction('עדכון', `עדכון תת-משימה: "${newTitle.trim()}"`);
+                await logAction('עדכון', `עדכון תת-משימה מלא: "${title}"`);
+                closeModal('modal-subtask');
                 loadAllData();
-            } catch (e) {}
+            } catch (err) {}
         }
 
         async function saveTask(e) {
@@ -961,16 +1063,18 @@
         }
 
         function populateAssigneeDropdown() {
-            const select = document.getElementById('task-assignee-select');
-            select.innerHTML = `<option value="">בחר אחראי</option>`;
-            allUsers.forEach(u => {
-                select.innerHTML += `<option value="${u.full_name}">${u.full_name}</option>`;
-            });
+            const selectTask = document.getElementById('task-assignee-select');
+            const selectSubtask = document.getElementById('subtask-assignee-select');
+
+            const options = `<option value="">בחר אחראי</option>` + allUsers.map(u => `<option value="${u.full_name}">${u.full_name}</option>`).join('');
+
+            if (selectTask) selectTask.innerHTML = options;
+            if (selectSubtask) selectSubtask.innerHTML = options;
         }
 
-        function toggleManualAssignee() {
-            const select = document.getElementById('task-assignee-select');
-            const input = document.getElementById('task-assignee-input');
+        function toggleManualAssignee(prefix) {
+            const select = document.getElementById(`${prefix}-assignee-select`);
+            const input = document.getElementById(`${prefix}-assignee-input`);
             if (select.classList.contains('hidden')) {
                 select.classList.remove('hidden');
                 input.classList.add('hidden');
