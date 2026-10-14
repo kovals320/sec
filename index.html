@@ -735,8 +735,6 @@
                 return;
             }
 
-            const isAdmin = currentUser && currentUser.role === 'admin';
-
             list.innerHTML = filtered.map(t => {
                 const subs = allSubtasks.filter(s => String(s.task_id) === String(t.id));
                 const isExpanded = expandedTaskIds.has(t.id);
@@ -752,7 +750,6 @@
                         <div onclick="toggleTaskExpand(${t.id}, event)" class="p-3.5 px-4 flex items-center justify-between cursor-pointer hover:bg-slate-800/40 transition-colors">
                             <div class="flex items-center gap-3 min-w-0">
                                 
-                                <!-- Tooltip למחשב בלבד (נטורל בניידים) -->
                                 <div class="relative group inline-block">
                                     <button onclick="event.stopPropagation(); toggleTaskComplete(${t.id}, ${!t.is_completed})" class="w-5 h-5 rounded-full border-2 ${t.is_completed ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-slate-600 hover:border-amber-500'} flex items-center justify-center shrink-0 transition-colors">
                                         ${t.is_completed ? '<i data-lucide="check" class="w-3 h-3"></i>' : ''}
@@ -770,7 +767,6 @@
                             </div>
 
                             <div class="flex items-center gap-2 shrink-0 pr-2">
-                                <!-- כפתור עריכת משימה (זמין לכולם בלחיצה) -->
                                 <button onclick="event.stopPropagation(); editTask(${t.id})" class="p-1.5 text-slate-400 hover:text-amber-500 transition-colors" title="עריכת משימה">
                                     <i data-lucide="pencil" class="w-4 h-4"></i>
                                 </button>
@@ -800,7 +796,10 @@
                                                     <button onclick="event.stopPropagation(); toggleSubtaskComplete(${s.id},${!s.is_completed})" class="text-slate-500 hover:text-emerald-400">
                                                         <i data-lucide="${s.is_completed ? 'check-circle-2' : 'circle'}" class="w-4 h-4 ${s.is_completed ? 'text-emerald-400' : ''}"></i>
                                                     </button>
-                                                    <button onclick="event.stopPropagation(); deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400">
+                                                    <button onclick="event.stopPropagation(); editSubtask(${s.id})" class="text-slate-400 hover:text-amber-500 p-1" title="ערוך תת-משימה">
+                                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                                    </button>
+                                                    <button onclick="event.stopPropagation(); deleteSubtask(${s.id})" class="text-slate-600 hover:text-red-400 p-1">
                                                         <i data-lucide="trash" class="w-3.5 h-3.5"></i>
                                                     </button>
                                                 </div>
@@ -852,6 +851,24 @@
             document.getElementById('modal-task-title').textContent = 'עריכת משימה';
             document.getElementById('modal-task').classList.remove('hidden');
             lucide.createIcons();
+        }
+
+        async function editSubtask(subtaskId) {
+            const sub = allSubtasks.find(s => String(s.id) === String(subtaskId));
+            if (!sub) return;
+
+            const newTitle = prompt("ערוך את תיאור התת-משימה:", sub.title);
+            if (newTitle === null || !newTitle.trim()) return;
+
+            try {
+                await fetch(`${SUPABASE_BASE_URL}/sec_subtasks?id=eq.${subtaskId}`, {
+                    method: 'PATCH',
+                    headers: apiHeaders,
+                    body: JSON.stringify({ title: newTitle.trim() })
+                });
+                await logAction('עדכון', `עדכון תת-משימה: "${newTitle.trim()}"`);
+                loadAllData();
+            } catch (e) {}
         }
 
         async function saveTask(e) {
