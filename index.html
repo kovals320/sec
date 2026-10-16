@@ -1485,6 +1485,12 @@
             return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
+        function hamalBadge(ev) {
+            if (ev.source === 'imported') return '<span class="text-[10px] font-bold text-sky-300 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">יובא מיומן ידני</span>';
+            if (ev.closed_manually) return '<span class="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">נסגר ידנית</span>';
+            return '<span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">הושלם</span>';
+        }
+
         function hamalFmt(iso) {
             if (!iso) return '';
             const d = new Date(iso);
@@ -1743,13 +1749,23 @@
                         <div class="bg-[#131d38] border border-slate-800 rounded-3xl p-4 space-y-1.5">
                             <div class="flex items-center justify-between gap-2">
                                 <h3 class="text-sm font-bold text-white">אירוע חמ"ל #${ev.id}</h3>
-                                ${ev.closed_manually ? '<span class="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">נסגר ידנית</span>' : ''}
+                                ${ev.source === 'imported' || ev.closed_manually ? hamalBadge(ev) : ''}
                             </div>
                             <div class="text-xs text-slate-400">הופעל: ${hamalFmt(ev.created_at)} · ${esc(ev.started_by)}</div>
                             <div class="text-xs text-slate-400">נסגר: ${hamalFmt(ev.closed_at)} · ${esc(ev.closed_by)}</div>
                             <div class="text-xs text-slate-400">משך: ${hamalDuration(ev.created_at, ev.closed_at)} · ${done}/${steps.length} שלבים בוצעו · ${updates.length} עדכונים</div>
                         </div>
+                        ${ev.lessons ? `
+                        <div class="bg-[#131d38] border border-amber-500/30 rounded-3xl p-4 space-y-2">
+                            <div class="flex items-center gap-2 text-sm font-bold text-white"><i data-lucide="lightbulb" class="w-4 h-4 text-amber-500"></i> לקחים מהאירוע</div>
+                            <ul class="space-y-1.5">${String(ev.lessons).split('\n').filter(l => l.trim()).map(l => `<li class="flex gap-2 text-xs text-slate-200 leading-relaxed"><span class="text-amber-500">•</span><span>${esc(l)}</span></li>`).join('')}</ul>
+                        </div>` : ''}
                         <div class="space-y-2">${steps.map(s => hamalStepRowHtml(s, updates, { readOnly: true })).join('')}</div>
+                        ${ev.source_log ? `
+                        <details class="bg-[#131d38] border border-slate-800 rounded-2xl p-3.5">
+                            <summary class="text-xs font-bold text-slate-300 cursor-pointer">היומן המקורי</summary>
+                            <div class="mt-3 text-xs text-slate-300 whitespace-pre-wrap leading-relaxed select-text">${esc(ev.source_log)}</div>
+                        </details>` : ''}
                     </div>`;
                 lucide.createIcons();
                 return;
@@ -1826,7 +1842,7 @@
                                 <button onclick="openHamalDetail(${ev.id})" class="w-full text-right bg-[#131d38] hover:bg-[#182445] border border-slate-800 rounded-2xl p-3.5 transition-colors space-y-1">
                                     <div class="flex items-center justify-between gap-2">
                                         <span class="text-sm font-bold text-white">${hamalFmt(ev.created_at)}</span>
-                                        ${ev.closed_manually ? '<span class="text-[10px] font-bold text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg">נסגר ידנית</span>' : '<span class="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-lg">הושלם</span>'}
+                                        ${hamalBadge(ev)}
                                     </div>
                                     <div class="text-xs text-slate-400">${esc(ev.started_by)} · משך ${hamalDuration(ev.created_at, ev.closed_at)} · ${done}/${stepsArr.length} שלבים · ${ups} עדכונים</div>
                                 </button>`;
